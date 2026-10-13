@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="968" height="999" viewBox="0 0 968 999" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13">
+<rect width="968" height="999" rx="10" fill="#1e1f22"/>
+<rect width="968" height="36" rx="10" fill="#2b2d31"/><rect y="20" width="968" height="16" fill="#2b2d31"/>
+<circle cx="18" cy="18" r="6" fill="#ff5f57"/><circle cx="38" cy="18" r="6" fill="#febc2e"/><circle cx="58" cy="18" r="6" fill="#28c840"/>
+<text x="484.0" y="23" text-anchor="middle" fill="#9aa0a6" font-size="12">.claude/handoffs/2026-10-12_1114_Rate-limiter-with-Redis-fallback_8f3c21aa.md</text>
+<text x="16" y="65" fill="#8ab4f8" xml:space="preserve"># Handoff: Rate limiter with Redis fallback</text>
+<text x="16" y="84" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="103" fill="#e3e3e3" xml:space="preserve">- Session: `8f3c21aa-1111-4e2e-9a11-aaaaaaaaaaaa`</text>
+<text x="16" y="122" fill="#e3e3e3" xml:space="preserve">- Project: `~/code/api-gateway`</text>
+<text x="16" y="141" fill="#e3e3e3" xml:space="preserve">- Branch: `feature/rate-limits`</text>
+<text x="16" y="160" fill="#e3e3e3" xml:space="preserve">- Started: 2026-10-12 11:14</text>
+<text x="16" y="179" fill="#e3e3e3" xml:space="preserve">- Updated: 2026-10-12 11:52</text>
+<text x="16" y="198" fill="#e3e3e3" xml:space="preserve">- User turns: 2</text>
+<text x="16" y="217" fill="#e3e3e3" xml:space="preserve">- Status: ⚪ saved (session closed 2026-10-12 11:53)</text>
+<text x="16" y="236" fill="#8d8d8d" xml:space="preserve">&lt;!-- handoff:root:8f3c21aa-1111-4e2e-9a11-aaaaaaaaaaaa --&gt;</text>
+<text x="16" y="255" fill="#8d8d8d" xml:space="preserve">&lt;!-- handoff:updated_epoch:1791900072 --&gt;</text>
+<text x="16" y="274" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="293" fill="#8ab4f8" xml:space="preserve">## Notes (written by /handoff:notes)</text>
+<text x="16" y="312" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="331" fill="#8d8d8d" xml:space="preserve">&lt;!-- handoff:notes:start --&gt;</text>
+<text x="16" y="350" fill="#8d8d8d" xml:space="preserve">_No notes yet. Run /handoff:notes in the session to record decisions, open questions and next step …</text>
+<text x="16" y="369" fill="#8d8d8d" xml:space="preserve">&lt;!-- handoff:notes:end --&gt;</text>
+<text x="16" y="388" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="407" fill="#8ab4f8" xml:space="preserve">## Compaction summary (written by Claude Code)</text>
+<text x="16" y="426" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="445" fill="#8d8d8d" xml:space="preserve">_1 compaction(s) in this thread; the latest is shown. Full texts: `~/code/api-gateway/.claude/hand …</text>
+<text x="16" y="464" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="483" fill="#8ab4f8" xml:space="preserve">### 2026-10-12 11:50 (auto)</text>
+<text x="16" y="502" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="521" fill="#8ab4f8" xml:space="preserve">#### Summary</text>
+<text x="16" y="540" fill="#e3e3e3" xml:space="preserve">Built a token-bucket rate limiter (100 req/min, burst 20) per API key as gateway middleware, first …</text>
+<text x="16" y="559" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="578" fill="#8ab4f8" xml:space="preserve">## Last reply from Claude</text>
+<text x="16" y="597" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="616" fill="#c3e88d" xml:space="preserve">&gt; Redis-backed bucket with Lua script for atomic take, in-process fallback after 2 failed pings. O …</text>
+<text x="16" y="635" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="654" fill="#8ab4f8" xml:space="preserve">## Earlier replies, oldest first</text>
+<text x="16" y="673" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="692" fill="#c3e88d" xml:space="preserve">&gt; Done. The limiter is a token bucket per API key (100/min, burst 20) in src/middleware/ratelimit. …</text>
+<text x="16" y="711" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="730" fill="#8ab4f8" xml:space="preserve">## User requests, in order</text>
+<text x="16" y="749" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="768" fill="#e3e3e3" xml:space="preserve">- `10-12 11:14` Add a token-bucket rate limiter to the gateway, 100 req/min per API key, burst 20</text>
+<text x="16" y="787" fill="#e3e3e3" xml:space="preserve">- `10-12 11:40` Use Redis, we run 3 replicas. Keep the in-process one as a fallback when Redis is  …</text>
+<text x="16" y="806" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="825" fill="#8ab4f8" xml:space="preserve">## Files changed</text>
+<text x="16" y="844" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="863" fill="#e3e3e3" xml:space="preserve">- `~/code/api-gateway/src/infra/redis.ts`</text>
+<text x="16" y="882" fill="#e3e3e3" xml:space="preserve">- `~/code/api-gateway/src/middleware/ratelimit.ts`</text>
+<text x="16" y="901" fill="#e3e3e3" xml:space="preserve">- `~/code/api-gateway/src/router.ts`</text>
+<text x="16" y="920" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="939" fill="#8ab4f8" xml:space="preserve">## Git</text>
+<text x="16" y="958" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="977" fill="#e3e3e3" xml:space="preserve">…</text>
+</svg>

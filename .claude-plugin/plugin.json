@@ -1,0 +1,18 @@
+{
+  "name": "handoff",
+  "version": "0.3.0",
+  "description": "Zero-token session handoff for Claude Code: a Stop hook writes one markdown file per session from the local transcript (requests, replies, files, git, cache numbers), SessionStart loads a compact version, /handoff:notes adds decisions and next steps.",
+  "author": {
+    "name": "Danylo Brusnik"
+  },
+  "license": "MIT",
+  "keywords": [
+    "handoff",
+    "session",
+    "memory",
+    "continuity",
+    "progress"
+  ],
+  "homepage": "https://github.com/DaniilBrusnikUa/claude-code-handoff",
+  "repository": "https://github.com/DaniilBrusnikUa/claude-code-handoff"
+}

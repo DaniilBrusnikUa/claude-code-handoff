@@ -1,0 +1,15 @@
+{
+  "name": "claude-code-handoff",
+  "owner": {
+    "name": "Danylo Brusnik",
+    "url": "https://github.com/DaniilBrusnikUa"
+  },
+  "plugins": [
+    {
+      "name": "handoff",
+      "source": "./",
+      "description": "Zero-token session handoff: one markdown file per session, written by a Stop hook from the local transcript and loaded at the next SessionStart."
+    }
+  ],
+  "description": "Session handoff plugin for Claude Code: one markdown file per session, zero tokens to write, loaded at the next session start."
+}
