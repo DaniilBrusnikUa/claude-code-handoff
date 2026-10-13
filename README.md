@@ -155,6 +155,8 @@ State lives next to the files in `.state/`: `<session>.adopt` (which thread a se
 
 **Headless runs.** `claude -p …` and SDK sessions are new sessions every time. The hooks detect them (`CLAUDE_CODE_SESSION_ATTENDED=0`, `CLAUDE_CODE_ENTRYPOINT=sdk-*`, or the transcript's own `entrypoint`) and do nothing.
 
+**What it runs, sends and fetches (disclosure for reviewers and the curious).** Hooks run the bash scripts in `scripts/` with `jq` and `git` from your PATH. They read the session transcript under `~/.claude/projects/`, the hook's stdin JSON, and `git` state of the project; they write markdown files and small state files under the handoff directory, a line in the clone's `.git/info/exclude`, and nothing else. `/handoff:open` runs `open` (macOS) or `xdg-open` (Linux) on the handoff file. No network access, no telemetry, no package installs, no credentials read or sent, no changes to Claude Code settings or permissions.
+
 **Privacy.** Everything is local: the scripts read `~/.claude/projects/` and write markdown next to your project. Requests and replies are copied as text, so `scripts/scrub.jq` redacts API keys (`sk-…`, AWS, GitHub, Slack), JWTs, bearer tokens, private keys and `password=` / `token=` / `api_key=` values. A guard against accidental commits, not a guarantee: review a file before sharing it. The directory is added to the clone's `.git/info/exclude`, which is local and never committed.
 
 ## Compared to
