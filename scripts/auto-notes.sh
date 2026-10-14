@@ -35,5 +35,5 @@ root="$(root_of_file "$file")"
 notes="$(notes_sidecar "$dir" "$root")"
 [ -f "$notes" ] || notes_of "$file" > "$notes"
 jq -nc --arg f "$notes" --arg n "$n" '{decision: "block",
-  reason: ("Handoff plugin, scheduled notes update (every " + $n + " turns): rewrite " + $f + " with current notes (Goal, State, Decisions, Rejected, Open questions, Next steps, Gotchas; under 60 lines; plain markdown, no marker lines, never secrets). The handoff file shows it on the next render. Then stop without further commentary.")}'
+  reason: ("Handoff plugin, scheduled notes update (every " + $n + " turns): rewrite " + $f + " with current notes (Goal, Done, In progress, Decisions, Rejected, Open questions, Next action with file:line or the exact command, Next steps, Gotchas; under 60 lines; plain markdown, no marker lines, never secrets). The handoff file shows it on the next render. Then stop without further commentary.")}'
 exit 0

@@ -58,6 +58,17 @@ check "notes: sidecar keeps the raw text" 'grep -q "hunter2" "$dir/.state/aaaaaa
 check "notes: still exactly one start marker with a marker in notes and compaction" '[ "$(grep -c "^<!-- handoff:notes:start -->$" "$fa")" = 1 ]'
 check "notes: the goal line survives" 'grep -q "Goal\*\*: t\." "$fa"'
 rm -f "$dir/.state/aaaaaaaa.notes.md" "$dir/.state/aaaaaaaa.compact.md"
+# Status line nudges and the cold-resume note (fields only the status line / a resume start receive).
+sl="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, context_window:{used_percentage:72.4}, rate_limits:{five_hour:{used_percentage:91}}}' | "$S/statusline.sh")"
+check "statusline: context percentage shown" 'printf "%s" "$sl" | grep -q "ctx 72%"'
+check "statusline: notes nudge at 70% context" 'printf "%s" "$sl" | grep -q "/handoff:notes before compaction"'
+check "statusline: notes nudge at 90% of the 5-hour limit" 'printf "%s" "$sl" | grep -q "5h limit 91%"'
+sl="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, context_window:{used_percentage:12}}' | "$S/statusline.sh")"
+check "statusline: no nudge at 12%" '! printf "%s" "$sl" | grep -q "/handoff:notes"'
+rs="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, source:"resume", prompt_cache_likely_expired:true, context_tokens:232000, estimated_cache_write_usd:"4.64", seconds_since_last_response:5400}' | "$S/load-handoff.sh")"
+check "resume: cold-resume note, no context injected" 'printf "%s" "$rs" | jq -e ".systemMessage | test(\"cold\") and test(\"232k\")" >/dev/null && ! printf "%s" "$rs" | jq -e ".hookSpecificOutput" >/dev/null 2>&1'
+rs="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, source:"resume", prompt_cache_likely_expired:false}' | "$S/load-handoff.sh")"
+check "resume: silent while the cache is warm" '[ -z "$rs" ]'
 check "User turns counts the array prompt" 'grep -q "^- User turns: 2$" "$fa"'
 check "array prompt text shown" 'grep -q "second request with a picture" "$fa"'
 check "AWS secret redacted" '! grep -q "abcdefgh1234" "$fa"'

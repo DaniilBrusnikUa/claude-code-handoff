@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 — 2026-10-14
+- Status bar: context percentage, and a `/handoff:notes` nudge at 70% context or 90% of the 5-hour limit (`CLAUDE_HANDOFF_NUDGE_CONTEXT`, `_NUDGE_LIMIT`). These fields reach only the status line, so this is zero tokens.
+- `SessionStart` on `resume`: a one-line note with the cost of a cold resume, from the `prompt_cache_likely_expired` / `estimated_cache_write_usd` fields Claude Code passes; silent while the cache is warm.
+- Start: injected context kept under the 10,000-character hook-output cap (`CLAUDE_HANDOFF_CONTEXT_CHARS`, blocks shrink to fit); branch-mismatch note when the newest handoff was written on another branch.
+- Notes: `Done` / `In progress` instead of `State`; `Next action` must be a file:line or an exact command.
+
 ## 0.4.1 — 2026-10-14
 - Notes are scrubbed for secrets in the rendered copy (the sidecar keeps the raw text); compaction sidecars written by older versions have their quoted markers neutralised on read.
 

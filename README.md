@@ -49,7 +49,7 @@ A new session with the handoff beats a cold resume (table above) as soon as the 
 | **One file per thread** | A new session gets its own file. Continue an old one with `/handoff:load` and the session **joins that file**: requests, replies, compaction summaries and token totals of all its sessions, in order. |
 | **Compact start** | The next session begins with the notes, the latest compaction summary, the last reply and an index of recent threads: typically 1–4k tokens depending on notes length. The full file is one read away. |
 | **Compaction summaries kept** | When Claude Code compacts the context it writes a summary you already paid for; a `PostCompact` hook stores it in the file. |
-| **Warm-cache hint** | Previous session closed less than an hour ago? The start message gives you `claude -r <id>`. Still open in another terminal? It says that instead. |
+| **Cost hints, zero tokens** | Previous session closed less than an hour ago? The start message gives you `claude -r <id>`. Still open in another terminal? It says that instead. Resuming after the cache expired? It tells you what that cold resume costs. The status bar shows context % and suggests `/handoff:notes` at 70% context or 90% of the 5-hour limit. |
 | **Pick from a menu** | `/handoff:list` shows the project's threads with an arrow-key menu; `/handoff:load` continues the chosen one. |
 | **Status everywhere** | Files carry 🟢 in work / ⚪ saved; the status bar shows which file this session writes to; `/handoff:status`, `/handoff:open`. |
 | **Token accounting** | Per thread: API calls, context size, cold cache writes, warm reads, output, and the moments when large cold writes happened (skill loads, cache expiry). Cold starts stop being invisible. |
@@ -58,7 +58,7 @@ A new session with the handoff beats a cold resume (table above) as soon as the 
 
 ## Quick tour
 
-1. **Start.** `SessionStart` gives Claude the compact handoff of the newest thread and prints a numbered index of recent threads in the terminal, with the cache hint (image above). A bare number as the first message continues that thread, the same as `/handoff:load <n>`; `new` starts fresh. Nothing is injected on `claude -r` (the history is there) or in `claude -p` runs.
+1. **Start.** `SessionStart` gives Claude the compact handoff of the newest thread and prints a numbered index of recent threads in the terminal, with the cache hint (image above). A bare number as the first message continues that thread, the same as `/handoff:load <n>`; `new` starts fresh. Nothing is injected on `claude -r` (the history is there) or in `claude -p` runs; a cold `claude -r` gets a one-line cost note instead. If the newest handoff was written on another branch, the start says so.
 2. **Work.** After every reply the `Stop` hook rewrites the thread's file and `LATEST.md`. The session's title becomes part of the file name as soon as Claude Code generates it.
 3. **Compaction.** `PostCompact` stores the summary and refreshes the file.
 4. **Switch.** `/handoff:list`, pick a thread, and this session joins it. Its own file is dropped because its history is in the thread now, unless other sessions had joined that file: then it stays and they move along.
@@ -116,6 +116,8 @@ Settings are environment variables. Put them in the `env` block of `~/.claude/se
 | `CLAUDE_HANDOFF_HEADLESS` | unset | `true` runs the plugin in `claude -p` / SDK sessions too. |
 | `CLAUDE_HANDOFF_KEEP` | `50` | Thread files kept per project (counts files, not days); older ones deleted, and only handoff files, only while the directory holds nothing else. Values 1–4 are raised to 5; `0` disables. |
 | `CLAUDE_HANDOFF_INDEX` | `5` | Threads listed at session start. |
+| `CLAUDE_HANDOFF_CONTEXT_CHARS` | `9500` | Max characters injected at start (Claude Code caps hook output at 10,000; blocks shrink to fit). |
+| `CLAUDE_HANDOFF_NUDGE_CONTEXT` / `_NUDGE_LIMIT` | `70` / `90` | Status bar suggests `/handoff:notes` from this context % / 5-hour usage %. `0` disables. |
 | `CLAUDE_HANDOFF_COMPACT_CHARS` | `3000` | Max characters per block in compact autoload. |
 | `CLAUDE_HANDOFF_LOAD_CHARS` | `16000` | Max characters in full autoload. |
 | `CLAUDE_HANDOFF_COMPACT_SUMMARY_CHARS` | `6000` | Max characters of the compaction summary kept in the file. |
@@ -132,7 +134,7 @@ Example, central storage for every project:
 
 <p align="center"><img src="docs/statusline.svg" alt="Status line: icon, file name, thread size, clickable full path" width="820"></p>
 
-`scripts/statusline.sh` prints one line from Claude Code's status-line JSON (the path is clickable in IDE terminals). Use it as the status line:
+`scripts/statusline.sh` prints one line from Claude Code's status-line JSON: the file this session writes to (the path is clickable in IDE terminals), the context percentage, and a `/handoff:notes` nudge when the context or the 5-hour limit gets high. These fields reach only the status line, never hooks, so this is the one place the plugin can warn without spending a token. Use it as the status line:
 
 ```json
 { "statusLine": { "type": "command", "command": "\"$(ls -d ~/.claude/plugins/cache/claude-code-handoff/handoff/*/ | sort -V | tail -1)scripts/statusline.sh\"" } }
@@ -146,7 +148,7 @@ or, if you already have a status script, call `handoff-status.sh --short <sessio
 |---|---|---|
 | `Stop` (every reply, async) | `scripts/save-handoff.sh` | Waits up to 2 s for the transcript to flush, takes the final reply from the hook's `last_assistant_message`, renders every session of the thread from their transcripts under a per-thread lock, copies the notes from `.state/<root>.notes.md`, writes the file atomically, copies `LATEST.md`, applies retention, records the open mark. Every delete, rename or join is logged in `.state/audit.log`. |
 | `PostCompact` | `scripts/save-compact.sh` | Stores `compact_summary` under `.state/<session>.compact.md` (wrapper tags stripped, inner headings demoted) and refreshes the file. |
-| `SessionStart` (`startup`, `clear`) | `scripts/load-handoff.sh` | Prints the compact handoff of the newest thread, the index (a bare number as the first message loads that thread), the cache hint. |
+| `SessionStart` (`startup`, `clear`, `resume`) | `scripts/load-handoff.sh` | Prints the compact handoff of the newest thread, the index (a bare number as the first message loads that thread), the cache and branch hints. On `resume` only a cost note, and only when Claude Code reports the cache as expired. |
 | `SessionEnd` | `scripts/mark-closed.sh` | Removes the open mark; status follows the remaining sessions. |
 | `Stop` with `CLAUDE_HANDOFF_AUTO_NOTES=N` | `scripts/auto-notes.sh` | Every N turns asks Claude to update the notes block. |
 | Skills | `skills/*/SKILL.md` | `list`, `load`, `notes`, `status`, `open`. Scripts find the current session through `CLAUDE_CODE_SESSION_ID`, which Claude Code sets for every shell it starts. |
@@ -168,7 +170,7 @@ State lives next to the files in `.state/`: `<root>.notes.md` (the notes, source
 | Tokens to save progress | 0 | 0 | a model call per save |
 | Cost of coming back after the cache expired | prefix + 1–4k tokens | the whole history, cold, at 2× | prefix + their summary |
 | Survives a killed terminal | yes, written after every reply | yes | depends on the hook used |
-| Knows when resuming is cheaper | yes, says so at start | n/a | no |
+| Knows when resuming is cheaper | yes, says so at start; warns on a cold resume | n/a | no |
 | Several sessions in one file | yes (threads) | no | varies |
 | Shows cold starts and cache usage | per thread | no | no |
 | Dependencies | bash, jq, git | none | often Node or Python |
