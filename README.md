@@ -56,7 +56,7 @@ A new session with the handoff beats a cold resume as soon as the conversation i
 
 ## Quick tour
 
-1. **Start.** `SessionStart` prints the compact handoff of the newest thread, an index of recent threads and the cache hint (image above). Nothing is injected on `claude -r` (the history is there) or in `claude -p` runs.
+1. **Start.** `SessionStart` prints the compact handoff of the newest thread, an index of recent threads and the cache hint (image above). Typing only a number from that index as the first message continues that thread, the same as `/handoff:load <n>`; `new` starts fresh. Nothing is injected on `claude -r` (the history is there) or in `claude -p` runs.
 2. **Work.** After every reply the `Stop` hook rewrites the thread's file and `LATEST.md`. The session's title becomes part of the file name as soon as Claude Code generates it.
 3. **Compaction.** `PostCompact` stores the summary and refreshes the file.
 4. **Switch.** `/handoff:list`, pick a thread, and this session joins it. Its own file, if any, is dropped because its history is in the thread now.
@@ -144,7 +144,7 @@ or, if you already have a status script, call `handoff-status.sh --short <sessio
 |---|---|---|
 | `Stop` (every reply, async) | `scripts/save-handoff.sh` | Waits up to 2 s for the transcript to flush, takes the final reply from the hook's `last_assistant_message`, renders every session of the thread from their transcripts, keeps the notes block, writes the file atomically, copies `LATEST.md`, applies retention, records the open mark. |
 | `PostCompact` | `scripts/save-compact.sh` | Stores `compact_summary` under `.state/<session>.compact.md` (wrapper tags stripped, inner headings demoted) and refreshes the file. |
-| `SessionStart` (`startup`, `clear`) | `scripts/load-handoff.sh` | Prints the compact handoff of the newest thread, the index, the cache hint. |
+| `SessionStart` (`startup`, `clear`) | `scripts/load-handoff.sh` | Prints the compact handoff of the newest thread, the index (a bare number as the first message loads that thread), the cache hint. |
 | `SessionEnd` | `scripts/mark-closed.sh` | Removes the open mark; status follows the remaining sessions. |
 | `Stop` with `CLAUDE_HANDOFF_AUTO_NOTES=N` | `scripts/auto-notes.sh` | Every N turns asks Claude to update the notes block. |
 | Skills | `skills/*/SKILL.md` | `list`, `load`, `notes`, `status`, `open`. Scripts find the current session through `CLAUDE_CODE_SESSION_ID`, which Claude Code sets for every shell it starts. |

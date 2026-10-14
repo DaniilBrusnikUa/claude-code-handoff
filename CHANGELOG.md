@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- A bare number as the first message continues that thread from the start index (`new` starts fresh): no `/handoff:list`, no menu, no extra request.
+
 ## 0.3.0 — 2026-10-13
 - Silent in `claude -p` / SDK sessions: no files, no context injected.
 - Per-session open marks: a thread file stays 🟢 while any of its sessions is open.
