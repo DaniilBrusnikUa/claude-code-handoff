@@ -9,7 +9,7 @@
   <img alt="bash + jq" src="https://img.shields.io/badge/runtime-bash%20%2B%20jq-lightgrey">
 </p>
 
-A Claude Code plugin that keeps one markdown **handoff file** per thread of work, written by shell hooks from the transcript Claude Code already stores on your machine. Nothing is sent to the model to write it; a few hundred tokens load it; the status line always shows where it is.
+A Claude Code plugin that keeps one markdown **handoff file** per thread of work, written by shell hooks from the transcript Claude Code already stores on your machine. Nothing is sent to the model to write it; 1–4k tokens load it; the status line always shows where it is.
 
 ```
 claude plugin marketplace add DaniilBrusnikUa/claude-code-handoff
@@ -23,18 +23,20 @@ Restart Claude Code once. That is the whole setup.
 | Coming back after a break | What is paid | Token equivalents | USD at API prices |
 |---|---|---|---|
 | `--resume` within the hour | warm read of the history | 0.025 × 232k = 5.8k | 0.06 |
-| **New session + handoff** | cold prefix + the handoff | 2 × 42k + 0.5k = 84.5k | 0.85 |
+| **New session + handoff** | cold prefix + the handoff | 2 × 42k + ~1k ≈ 85k | 0.85 |
 | `--resume` after the hour | cold write of the history | 2 × 232k = 464k | 4.64 |
+
+Factors are the model's cache rates: a read costs 0.025× the input price, a 1-hour cache write 2×; USD at $10 per million input tokens. Your prefix and rates will differ; the arithmetic does not.
 
 <p align="center"><img src="docs/session-start.svg" alt="What a new session sees at start: the handoff of the previous session, an index of recent threads, and a warm-cache hint" width="820"></p>
 
 ---
 
-**Contents:** [Why](#why) · [What you get](#what-you-get) · [Quick tour](#quick-tour) · [Commands](#commands) · [The file](#the-file) · [Modes and settings](#modes-and-settings) · [Status bar](#status-bar) · [How it works](#how-it-works) · [Compared to](#compared-to) · [FAQ](#faq) · [Requirements](#requirements) · [Development](#development)
+**Contents:** [Why](#why) · [What you get](#what-you-get) · [Quick tour](#quick-tour) · [Commands](#commands) · [The file](#the-file) · [Modes and settings](#modes-and-settings) · [Status bar](#status-bar) · [How it works](#how-it-works) · [Compared to](#compared-to) · [FAQ](#faq) · [Uninstall](#uninstall) · [Requirements](#requirements) · [Development](#development)
 
 ## Why
 
-Claude remembers nothing between requests: every turn re-sends the whole session, and the prompt cache is what makes that affordable. A cache entry lives one hour on a subscription. Come back after that and the **whole history is re-sent cold at double price**. The handoff file gives a fresh session what it needs for a few hundred tokens.
+Claude remembers nothing between requests: every turn re-sends the whole session, and the prompt cache is what makes that affordable. A cache entry lives one hour on a subscription. Come back after that and the **whole history is re-sent cold at double price**. The handoff file gives a fresh session what it needs for 1–4k tokens.
 
 A new session with the handoff beats a cold resume (table above) as soon as the conversation is longer than the fixed prefix (about 40–50k tokens), and the gap grows with every turn. On a subscription the same arithmetic applies to your usage limit instead of dollars. The plugin tells you at session start when resuming is still the cheaper option.
 
@@ -56,10 +58,10 @@ A new session with the handoff beats a cold resume (table above) as soon as the 
 
 ## Quick tour
 
-1. **Start.** `SessionStart` prints the compact handoff of the newest thread, an index of recent threads and the cache hint (image above). The index is also printed in the terminal, and typing only a number from it as the first message continues that thread, the same as `/handoff:load <n>`; `new` starts fresh. Nothing is injected on `claude -r` (the history is there) or in `claude -p` runs.
+1. **Start.** `SessionStart` gives Claude the compact handoff of the newest thread and prints a numbered index of recent threads in the terminal, with the cache hint (image above). A bare number as the first message continues that thread, the same as `/handoff:load <n>`; `new` starts fresh. Nothing is injected on `claude -r` (the history is there) or in `claude -p` runs.
 2. **Work.** After every reply the `Stop` hook rewrites the thread's file and `LATEST.md`. The session's title becomes part of the file name as soon as Claude Code generates it.
 3. **Compaction.** `PostCompact` stores the summary and refreshes the file.
-4. **Switch.** `/handoff:list`, pick a thread, and this session joins it. Its own file, if any, is dropped because its history is in the thread now.
+4. **Switch.** `/handoff:list`, pick a thread, and this session joins it. Its own file is dropped because its history is in the thread now, unless other sessions had joined that file: then it stays and they move along.
 
 <p align="center"><img src="docs/list.svg" alt="/handoff:list output: numbered threads with status, date, title, age, branch and id" width="820"></p>
 
@@ -149,7 +151,7 @@ or, if you already have a status script, call `handoff-status.sh --short <sessio
 | `Stop` with `CLAUDE_HANDOFF_AUTO_NOTES=N` | `scripts/auto-notes.sh` | Every N turns asks Claude to update the notes block. |
 | Skills | `skills/*/SKILL.md` | `list`, `load`, `notes`, `status`, `open`. Scripts find the current session through `CLAUDE_CODE_SESSION_ID`, which Claude Code sets for every shell it starts. |
 
-State lives next to the files in `.state/`: `<session>.adopt` (which thread a session joined), `<root>.members`, `<session>.transcript`, `<session>.open`, `<session>.compact.md`, `<root>.frozen.md`.
+State lives next to the files in `.state/`: `<root>.notes.md` (the notes, source of truth), `<root>.members` and `<session>.adopt` (thread membership), `<session>.transcript`, `<session>.open` / `.closed`, `<session>.compact.md`, `<root>.frozen.md` (snapshot), `<session>.index` (menu numbers as printed), `audit.log` (every delete, rename, join).
 
 **Threads.** A thread is a root session plus the sessions that joined it with `/handoff:load`. The writer renders all their transcripts, in order, into the root's file, so two open sessions of one thread keep the same file. The file keeps the root's title.
 
@@ -215,7 +217,7 @@ Every script accepts the hook's JSON on stdin, so they can be tested without a s
 jq -nc '{session_id:"abc", transcript_path:"/path/to/session.jsonl", cwd:"/path/to/project"}' | scripts/save-handoff.sh
 ```
 
-The images in `docs/` are rendered from real plugin output on a demo project with `docs/render-terminal.py`.
+`tests/run.sh` runs 50 checks on synthetic fixtures in a temp directory (render stability, notes markers, retention guard, thread join, secret scrubbing). The images in `docs/` are rendered from real plugin output on a demo project with `docs/render-terminal.py`.
 
 See [CHANGELOG.md](CHANGELOG.md). Issues and pull requests welcome.
 
