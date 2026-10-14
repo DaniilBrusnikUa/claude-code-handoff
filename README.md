@@ -18,6 +18,14 @@ claude plugin install handoff@claude-code-handoff
 
 Restart Claude Code once. That is the whole setup.
 
+**What does a cold resume cost you?** Real numbers from the session this plugin was built in (Claude Fable 5.1, fixed prefix 42k tokens, history 232k):
+
+| Coming back after a break | What is paid | Token equivalents | USD at API prices |
+|---|---|---|---|
+| `--resume` within the hour | warm read of the history | 0.025 × 232k = 5.8k | 0.06 |
+| **New session + handoff** | cold prefix + the handoff | 2 × 42k + 0.5k = 84.5k | 0.85 |
+| `--resume` after the hour | cold write of the history | 2 × 232k = 464k | 4.64 |
+
 <p align="center"><img src="docs/session-start.svg" alt="What a new session sees at start: the handoff of the previous session, an index of recent threads, and a warm-cache hint" width="820"></p>
 
 ---
@@ -28,15 +36,7 @@ Restart Claude Code once. That is the whole setup.
 
 Claude remembers nothing between requests: every turn re-sends the whole session, and the prompt cache is what makes that affordable. A cache entry lives one hour on a subscription. Come back after that and the **whole history is re-sent cold at double price**. The handoff file gives a fresh session what it needs for a few hundred tokens.
 
-Real numbers from the session this plugin was built in (Claude Fable 5.1, fixed prefix 42k tokens, history 232k):
-
-| Coming back after a break | What is paid | Token equivalents | USD at API prices |
-|---|---|---|---|
-| `--resume` within the hour | warm read of the history | 0.025 × 232k = 5.8k | 0.06 |
-| **New session + handoff** | cold prefix + the handoff | 2 × 42k + 0.5k = 84.5k | 0.85 |
-| `--resume` after the hour | cold write of the history | 2 × 232k = 464k | 4.64 |
-
-A new session with the handoff beats a cold resume as soon as the conversation is longer than the fixed prefix (about 40–50k tokens), and the gap grows with every turn. On a subscription the same arithmetic applies to your usage limit instead of dollars. The plugin tells you at session start when resuming is still the cheaper option.
+A new session with the handoff beats a cold resume (table above) as soon as the conversation is longer than the fixed prefix (about 40–50k tokens), and the gap grows with every turn. On a subscription the same arithmetic applies to your usage limit instead of dollars. The plugin tells you at session start when resuming is still the cheaper option.
 
 ## What you get
 
