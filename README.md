@@ -45,14 +45,14 @@ A new session with the handoff beats a cold resume (table above) as soon as the 
 | **Zero tokens to write** | A `Stop` hook rebuilds the file after every reply with `bash`, `jq` and `git`. The model is never called. |
 | **Always current** | Written after every reply, not at session end. A killed terminal or a sleeping laptop loses nothing. |
 | **One file per thread** | A new session gets its own file. Continue an old one with `/handoff:load` and the session **joins that file**: requests, replies, compaction summaries and token totals of all its sessions, in order. |
-| **Compact start** | The next session begins with the notes, the latest compaction summary, the last reply and an index of recent threads: about 500–800 tokens. The full file is one read away. |
+| **Compact start** | The next session begins with the notes, the latest compaction summary, the last reply and an index of recent threads: typically 1–4k tokens depending on notes length. The full file is one read away. |
 | **Compaction summaries kept** | When Claude Code compacts the context it writes a summary you already paid for; a `PostCompact` hook stores it in the file. |
 | **Warm-cache hint** | Previous session closed less than an hour ago? The start message gives you `claude -r <id>`. Still open in another terminal? It says that instead. |
 | **Pick from a menu** | `/handoff:list` shows the project's threads with an arrow-key menu; `/handoff:load` continues the chosen one. |
 | **Status everywhere** | Files carry 🟢 in work / ⚪ saved; the status bar shows which file this session writes to; `/handoff:status`, `/handoff:open`. |
 | **Token accounting** | Per thread: API calls, context size, cold cache writes, warm reads, output, and the moments when large cold writes happened (skill loads, cache expiry). Cold starts stop being invisible. |
 | **Silent in scripts** | `claude -p …` and SDK sessions write nothing and load nothing. No files pile up from automation. |
-| **Hygiene** | Secrets redacted before they reach the file; the directory added to the clone's `.git/info/exclude`; the newest 50 files kept; nothing leaves your machine. |
+| **Hygiene** | Common secret shapes redacted before they reach the file; the directory added to the clone's `.git/info/exclude`; the newest 50 files kept; nothing leaves your machine. |
 
 ## Quick tour
 
@@ -112,7 +112,7 @@ Settings are environment variables. Put them in the `env` block of `~/.claude/se
 | `CLAUDE_HANDOFF_AUTOLOAD` | `compact` | What the session start injects. `compact`: notes, compaction summary, last reply, index. `full`: the whole file. `false`: nothing. |
 | `CLAUDE_HANDOFF_AUTO_NOTES` | `0` | `N`: every N user turns Claude is kept going one more step to update the notes block. Costs a model turn each time. |
 | `CLAUDE_HANDOFF_HEADLESS` | unset | `true` runs the plugin in `claude -p` / SDK sessions too. |
-| `CLAUDE_HANDOFF_KEEP` | `50` | Thread files kept per project; older ones deleted. `0` disables. |
+| `CLAUDE_HANDOFF_KEEP` | `50` | Thread files kept per project (counts files, not days); older ones deleted, and only handoff files, only while the directory holds nothing else. Values 1–4 are raised to 5; `0` disables. |
 | `CLAUDE_HANDOFF_INDEX` | `5` | Threads listed at session start. |
 | `CLAUDE_HANDOFF_COMPACT_CHARS` | `3000` | Max characters per block in compact autoload. |
 | `CLAUDE_HANDOFF_LOAD_CHARS` | `16000` | Max characters in full autoload. |
@@ -133,7 +133,7 @@ Example, central storage for every project:
 `scripts/statusline.sh` prints one line from Claude Code's status-line JSON (the path is clickable in IDE terminals). Use it as the status line:
 
 ```json
-{ "statusLine": { "type": "command", "command": "~/.claude/plugins/cache/claude-code-handoff/handoff/<version>/scripts/statusline.sh" } }
+{ "statusLine": { "type": "command", "command": "\"$(ls -d ~/.claude/plugins/cache/claude-code-handoff/handoff/*/ | sort -V | tail -1)scripts/statusline.sh\"" } }
 ```
 
 or, if you already have a status script, call `handoff-status.sh --short <session_id> <cwd>` from it and print the result as one more line.
@@ -142,7 +142,7 @@ or, if you already have a status script, call `handoff-status.sh --short <sessio
 
 | Event | Script | What happens |
 |---|---|---|
-| `Stop` (every reply, async) | `scripts/save-handoff.sh` | Waits up to 2 s for the transcript to flush, takes the final reply from the hook's `last_assistant_message`, renders every session of the thread from their transcripts, keeps the notes block, writes the file atomically, copies `LATEST.md`, applies retention, records the open mark. |
+| `Stop` (every reply, async) | `scripts/save-handoff.sh` | Waits up to 2 s for the transcript to flush, takes the final reply from the hook's `last_assistant_message`, renders every session of the thread from their transcripts under a per-thread lock, copies the notes from `.state/<root>.notes.md`, writes the file atomically, copies `LATEST.md`, applies retention, records the open mark. Every delete, rename or join is logged in `.state/audit.log`. |
 | `PostCompact` | `scripts/save-compact.sh` | Stores `compact_summary` under `.state/<session>.compact.md` (wrapper tags stripped, inner headings demoted) and refreshes the file. |
 | `SessionStart` (`startup`, `clear`) | `scripts/load-handoff.sh` | Prints the compact handoff of the newest thread, the index (a bare number as the first message loads that thread), the cache hint. |
 | `SessionEnd` | `scripts/mark-closed.sh` | Removes the open mark; status follows the remaining sessions. |
@@ -157,14 +157,14 @@ State lives next to the files in `.state/`: `<session>.adopt` (which thread a se
 
 **What it runs, sends and fetches (disclosure for reviewers and the curious).** Hooks run the bash scripts in `scripts/` with `jq` and `git` from your PATH. They read the session transcript under `~/.claude/projects/`, the hook's stdin JSON, and `git` state of the project; they write markdown files and small state files under the handoff directory, a line in the clone's `.git/info/exclude`, and nothing else. `/handoff:open` runs `open` (macOS) or `xdg-open` (Linux) on the handoff file. No network access, no telemetry, no package installs, no credentials read or sent, no changes to Claude Code settings or permissions.
 
-**Privacy.** Everything is local: the scripts read `~/.claude/projects/` and write markdown next to your project. Requests and replies are copied as text, so `scripts/scrub.jq` redacts API keys (`sk-…`, AWS, GitHub, Slack), JWTs, bearer tokens, private keys and `password=` / `token=` / `api_key=` values. A guard against accidental commits, not a guarantee: review a file before sharing it. The directory is added to the clone's `.git/info/exclude`, which is local and never committed.
+**Privacy.** Everything is local: the scripts read `~/.claude/projects/` and write markdown next to your project. Requests and replies are copied as text, so `scripts/scrub.jq` redacts common secret shapes: API keys (`sk-…`, `sk_live_…`, AWS, Google, GitHub, GitLab, Slack), JWTs, bearer tokens, private keys, credentials in URLs and `password=` / `token=` / `*_secret_*=` style values, in replies, requests, summaries and the git section. A guard against accidental leaks, not a guarantee: review a file before sharing it, and keep secrets out of the notes. The directory is added to the clone's `.git/info/exclude`, which is local and never committed.
 
 ## Compared to
 
 | | claude-code-handoff | `claude --resume` | memory plugins that summarize with a model |
 |---|---|---|---|
 | Tokens to save progress | 0 | 0 | a model call per save |
-| Cost of coming back after the cache expired | prefix + ~500 tokens | the whole history, cold, at 2× | prefix + their summary |
+| Cost of coming back after the cache expired | prefix + 1–4k tokens | the whole history, cold, at 2× | prefix + their summary |
 | Survives a killed terminal | yes, written after every reply | yes | depends on the hook used |
 | Knows when resuming is cheaper | yes, says so at start | n/a | no |
 | Several sessions in one file | yes (threads) | no | varies |
@@ -188,6 +188,15 @@ The plugin does not replace `--resume`: within the hour, resuming is the cheapes
 **Two terminals in the same project?** Each session has its own file unless it joined a thread. The index at start lists both; the status says which are open.
 
 **Windows?** Untested. The scripts are plain bash + jq; Git Bash or WSL should work. Reports welcome.
+
+## Uninstall
+
+`claude plugin uninstall handoff@claude-code-handoff` (or remove it in `/plugin`). Nothing else runs afterwards. What stays, and how to remove it:
+
+- `.claude/handoffs/` in each project (the handoff files, `LATEST.md`, `.state/`): delete the directory.
+- The line `/.claude/handoffs/` in the clone's `.git/info/exclude`: delete it if you want.
+- `~/.claude/handoffs/` when `CLAUDE_HANDOFF_IN_PROJECT=false` was used.
+- The `statusLine` entry in `~/.claude/settings.json` if you added it.
 
 ## Requirements
 

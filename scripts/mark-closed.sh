@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# SessionEnd hook. Removes this session's open mark and sets the thread file's status:
-# still 🟢 if another session of the thread is open, ⚪ saved otherwise.
+# SessionEnd hook. Removes this session's open mark, records when it closed (so a Stop hook
+# that is still running does not re-open it) and sets the thread file's status: still 🟢 if
+# another session of the thread is open, ⚪ saved otherwise.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/lib.sh"
@@ -13,7 +14,9 @@ cwd="$(printf '%s' "$input" | jq -r '.cwd // empty')"
 [ -n "$sid" ] || exit 0
 [ -n "$cwd" ] || cwd="$PWD"
 dir="$(handoff_dir "$cwd")"
+[ -d "$(state_dir "$dir")" ] || exit 0
 rm -f "$(open_mark "$dir" "$sid")"
+date +%s > "$(closed_mark "$dir" "$sid")"
 f="$(session_file_for "$dir" "$sid")"
 [ -n "$f" ] && [ -f "$f" ] || exit 0
 root="$(thread_root "$dir" "$sid")"
