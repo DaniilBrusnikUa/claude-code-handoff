@@ -1,37 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="968" height="657" viewBox="0 0 968 657" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13">
-<rect width="968" height="657" rx="10" fill="#1e1f22"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="968" height="752" viewBox="0 0 968 752" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13">
+<rect width="968" height="752" rx="10" fill="#1e1f22"/>
 <rect width="968" height="36" rx="10" fill="#2b2d31"/><rect y="20" width="968" height="16" fill="#2b2d31"/>
 <circle cx="18" cy="18" r="6" fill="#ff5f57"/><circle cx="38" cy="18" r="6" fill="#febc2e"/><circle cx="58" cy="18" r="6" fill="#28c840"/>
-<text x="484.0" y="23" text-anchor="middle" fill="#9aa0a6" font-size="12">claude — new session, what the plugin injects at start</text>
-<text x="16" y="65" fill="#f5d87a" xml:space="preserve">Handoff from the previous Claude Code session in this project.</text>
-<text x="16" y="84" fill="#e3e3e3" xml:space="preserve">Generated automatically from the transcript; verify against the current code before acting on it.</text>
-<text x="16" y="103" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="122" fill="#8ab4f8" xml:space="preserve"># Handoff: Rate limiter with Redis fallback</text>
-<text x="16" y="141" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="160" fill="#e3e3e3" xml:space="preserve">- Session: `8f3c21aa-1111-4e2e-9a11-aaaaaaaaaaaa`</text>
-<text x="16" y="179" fill="#e3e3e3" xml:space="preserve">- Project: `~/code/api-gateway`</text>
-<text x="16" y="198" fill="#e3e3e3" xml:space="preserve">- Branch: `feature/rate-limits`</text>
-<text x="16" y="217" fill="#e3e3e3" xml:space="preserve">- Started: 2026-10-12 11:14</text>
-<text x="16" y="236" fill="#e3e3e3" xml:space="preserve">- Updated: 2026-10-12 11:52</text>
-<text x="16" y="255" fill="#e3e3e3" xml:space="preserve">- User turns: 2</text>
-<text x="16" y="274" fill="#e3e3e3" xml:space="preserve">- Status: ⚪ saved (session closed 2026-10-12 11:53)</text>
+<text x="484.0" y="23" text-anchor="middle" fill="#9aa0a6" font-size="12">claude — new session: the index in the terminal, a number as the first message, the thread continues</text>
+<text x="16" y="65" fill="#e3e3e3" xml:space="preserve">SessionStart:startup says: handoff: recent sessions here. Type a number as your first message to c …</text>
+<text x="16" y="84" fill="#e3e3e3" xml:space="preserve">1. ⚪ 2026-10-12 11:14 | Rate limiter with Redis fallback | 25 min ago | feature/rate-limits | id 8 …</text>
+<text x="16" y="103" fill="#e3e3e3" xml:space="preserve">2. ⚪ 2026-10-12 10:02 | Health check 503 after deploy | 30 h ago | feature/rate-limits | id 2b77d9 …</text>
+<text x="16" y="122" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="141" fill="#f5d87a" xml:space="preserve">Note for the user: session 8f3c21aa closed 25 min ago, so its prompt cache is probably still warm  …</text>
+<text x="16" y="160" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="179" fill="#c3e88d" xml:space="preserve">&gt; 2</text>
+<text x="16" y="198" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="217" fill="#e3e3e3" xml:space="preserve">Handoff file: .claude/handoffs/2026-10-12_1114_Rate-limiter-with-Redis-fallback_8f3c21aa.md</text>
+<text x="16" y="236" fill="#e3e3e3" xml:space="preserve">joined thread 8f3c21aa: this session now writes into 2026-10-12_1114_Rate-limiter-with-Redis-fallb …</text>
+<text x="16" y="255" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="274" fill="#8ab4f8" xml:space="preserve"># Handoff: Rate limiter with Redis fallback</text>
 <text x="16" y="293" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="312" fill="#8ab4f8" xml:space="preserve">## Compaction summary (written by Claude Code)</text>
-<text x="16" y="331" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="350" fill="#8ab4f8" xml:space="preserve">### 2026-10-12 11:50 (auto)</text>
-<text x="16" y="369" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="388" fill="#8ab4f8" xml:space="preserve">#### Summary</text>
-<text x="16" y="407" fill="#e3e3e3" xml:space="preserve">Built a token-bucket rate limiter (100 req/min, burst 20) per API key as gateway middleware, first …</text>
-<text x="16" y="426" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="445" fill="#8ab4f8" xml:space="preserve">## Last reply from Claude</text>
+<text x="16" y="312" fill="#e3e3e3" xml:space="preserve">- Session: `8f3c21aa-1111-4e2e-9a11-aaaaaaaaaaaa`</text>
+<text x="16" y="331" fill="#e3e3e3" xml:space="preserve">- Thread: 8f3c21aa → c41d0b2e (2 sessions in this file)</text>
+<text x="16" y="350" fill="#e3e3e3" xml:space="preserve">- Project: `~/code/api-gateway`</text>
+<text x="16" y="369" fill="#e3e3e3" xml:space="preserve">- Branch: `feature/rate-limits`</text>
+<text x="16" y="388" fill="#e3e3e3" xml:space="preserve">- Started: 2026-10-12 11:14</text>
+<text x="16" y="407" fill="#e3e3e3" xml:space="preserve">- Updated: 2026-10-12 11:52</text>
+<text x="16" y="426" fill="#e3e3e3" xml:space="preserve">- User turns: 2</text>
+<text x="16" y="445" fill="#e3e3e3" xml:space="preserve">- Status: 🟢 in work (open: c41d0b2e)</text>
 <text x="16" y="464" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="483" fill="#c3e88d" xml:space="preserve">&gt; Redis-backed bucket with Lua script for atomic take, in-process fallback after 2 failed pings. O …</text>
+<text x="16" y="483" fill="#8ab4f8" xml:space="preserve">## Notes (written by /handoff:notes)</text>
 <text x="16" y="502" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="521" fill="#e3e3e3" xml:space="preserve">Full handoff (requests, earlier replies, files, git, tokens): `~/code/api-gateway/.claude/handoffs …</text>
-<text x="16" y="540" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="559" fill="#e3e3e3" xml:space="preserve">Recent sessions here (newest first; /handoff:load &lt;number&gt; loads another one):</text>
-<text x="16" y="578" fill="#e3e3e3" xml:space="preserve">1. ⚪ 2026-10-12 11:14 | Rate limiter with Redis fallback | 25 min ago | feature/rate-limits | id 8 …</text>
-<text x="16" y="597" fill="#e3e3e3" xml:space="preserve">2. ⚪ 2026-10-12 10:02 | Health check 503 after deploy | 30 h ago | feature/rate-limits | id 2b77d9 …</text>
+<text x="16" y="521" fill="#e3e3e3" xml:space="preserve">**Goal**: per-key rate limiting in the gateway, Redis first, in-process fallback.</text>
+<text x="16" y="540" fill="#e3e3e3" xml:space="preserve">**Decisions**: token bucket (100 req/min, burst 20); Lua script for atomic take; fallback after 2  …</text>
+<text x="16" y="559" fill="#e3e3e3" xml:space="preserve">**Next steps**: 1. metrics for fallback mode 2. load test at 5k rps</text>
+<text x="16" y="578" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="597" fill="#8ab4f8" xml:space="preserve">## Compaction summary (written by Claude Code)</text>
 <text x="16" y="616" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="635" fill="#f5d87a" xml:space="preserve">Note for the user: session 8f3c21aa closed 25 min ago, so its prompt cache is probably still warm  …</text>
+<text x="16" y="635" fill="#8ab4f8" xml:space="preserve">#### Summary</text>
+<text x="16" y="654" fill="#e3e3e3" xml:space="preserve">Built a token-bucket rate limiter (100 req/min, burst 20) per API key as gateway middleware, first …</text>
+<text x="16" y="673" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="692" fill="#8ab4f8" xml:space="preserve">## Last reply from Claude</text>
+<text x="16" y="711" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="730" fill="#c3e88d" xml:space="preserve">&gt; Redis-backed bucket with Lua script for atomic take, in-process fallback after 2 failed pings. O …</text>
 </svg>

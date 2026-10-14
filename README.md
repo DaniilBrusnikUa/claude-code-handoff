@@ -28,7 +28,7 @@ Restart Claude Code once. That is the whole setup.
 
 Factors are the model's cache rates: a read costs 0.025× the input price, a 1-hour cache write 2×; USD at $10 per million input tokens. Your prefix and rates will differ; the arithmetic does not.
 
-<p align="center"><img src="docs/session-start.svg" alt="What a new session sees at start: the handoff of the previous session, an index of recent threads, and a warm-cache hint" width="820"></p>
+<p align="center"><img src="docs/session-start.svg" alt="What a new session sees at start: the index of recent threads and the cache hint in the terminal; typing a number continues that thread" width="820"></p>
 
 ---
 
