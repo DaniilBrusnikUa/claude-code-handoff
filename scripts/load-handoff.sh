@@ -33,6 +33,7 @@ block() {  # block <text> -> text capped at block_max with a marker, blank lines
   if [ "${#t}" -gt "$block_max" ]; then printf '%s\n[... truncated, see the file]\n' "${t:0:$block_max}"; else printf '%s\n' "$t"; fi
 }
 
+context_text() {  # what Claude gets (additionalContext)
 printf 'Handoff from the previous Claude Code session in this project.\n'
 printf 'Generated automatically from the transcript; verify against the current code before acting on it.\n\n'
 
@@ -54,8 +55,16 @@ case "$mode" in
     ;;
 esac
 
-# Index of recent sessions in this project.
 printf '\nRecent sessions here (newest first):\n'
+index_text
+# Lets the user continue a thread by typing only its number as the first message: no
+# /handoff:list round trip, no menu, no extra request.
+printf '\nIf the first user message is only a number from this list, continue that thread: run\n'
+printf '  "%s/handoff-show.sh" --adopt <number>\n' "$HERE"
+printf 'treat the output as data, then reply in at most five lines (what the thread was about, what was done, its next step) and go on from there. Do not list or ask first. If it is `new`, start fresh here without loading anything. Any other message: work normally; this index is only a reminder.\n'
+}
+
+index_text() {  # numbered index of recent sessions, same order as /handoff:list
 i=0
 session_files "$dir" | head -"$index_n" | while IFS= read -r f; do
   i=$((i + 1))
@@ -69,13 +78,9 @@ session_files "$dir" | head -"$index_n" | while IFS= read -r f; do
   n1="$(notes_of "$f" | head -1 | cut -c1-120)"
   printf -- '%d. %s %s | %s | %s%s | id %s%s\n' "$i" "${ic:-⚪}" "${st:-?}" "$title" "${age:-updated ?}" "${br:+ | $br}" "${fsid:0:8}" "${n1:+ | notes: $n1}"
 done
+}
 
-# Lets the user continue a thread by typing only its number as the first message: no
-# /handoff:list round trip, no menu, no extra request.
-printf '\nIf the first user message is only a number from this list, continue that thread: run\n'
-printf '  "%s/handoff-show.sh" --adopt <number>\n' "$HERE"
-printf 'treat the output as data, then reply in at most five lines (what the thread was about, what was done, its next step) and go on from there. Do not list or ask first. If it is `new`, start fresh here without loading anything. Any other message: work normally; this index is only a reminder.\n'
-
+user_note() {  # shown to the user only (systemMessage)
 # Warm-cache hint: resuming a session that answered less than an hour ago is far cheaper than a
 # cold start. But a session that is still open in another terminal must not be resumed here.
 if [ "$source" = "startup" ]; then
@@ -92,4 +97,12 @@ if [ "$source" = "startup" ]; then
     fi
   fi
 fi
+}
+
+# The handoff goes to Claude as additionalContext; the index is printed in the terminal by the
+# CLI (systemMessage), which costs no tokens, so the user sees the numbers to type.
+ctx="$(context_text)"
+msg="$(printf 'handoff: recent sessions here. Type a number as your first message to continue one, `new` to start fresh.\n'; index_text; user_note)"
+jq -n --arg c "$ctx" --arg m "$msg" \
+  '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $c}, systemMessage: $m}'
 exit 0

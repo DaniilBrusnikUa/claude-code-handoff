@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.2 — 2026-10-14
+- The start index is printed in the terminal (hook `systemMessage`, no tokens), so the number to type is visible; the handoff itself goes to Claude as `additionalContext`.
+
 ## 0.3.1 — 2026-10-14
 - A bare number as the first message continues that thread from the start index (`new` starts fresh): no `/handoff:list`, no menu, no extra request.
 
