@@ -170,7 +170,8 @@ if [ ! -f "$notes_file" ] && [ -f "$file" ]; then
   notes_of "$file" > "$notes_file"
 fi
 notes_body=""
-[ -f "$notes_file" ] && notes_body="$(sidecar_notes "$notes_file")"
+# Notes are user text: secrets are still scrubbed and a pasted marker line cannot close the block.
+[ -f "$notes_file" ] && notes_body="$(sidecar_notes "$notes_file" | jq -Rrs -L "$HERE" 'include "scrub"; scrub' 2>/dev/null | sed -e '${/^$/d;}')"
 [ -n "$notes_body" ] || notes_body="$NOTES_PLACEHOLDER"
 notes="$NOTES_START
 $notes_body
@@ -180,7 +181,8 @@ $NOTES_END"
 compact_section=""
 all_compact=""
 while IFS= read -r m; do
-  [ -n "$m" ] && [ -s "$st/${m:0:8}.compact.md" ] && all_compact="${all_compact}$(cat "$st/${m:0:8}.compact.md")
+  # Sidecars written by older versions may quote the notes markers: neutralise them on the way in.
+  [ -n "$m" ] && [ -s "$st/${m:0:8}.compact.md" ] && all_compact="${all_compact}$(sed 's/<!-- handoff:/<!-- handoffâ/g' "$st/${m:0:8}.compact.md")
 "
 done <<< "$members"
 if [ -n "$all_compact" ]; then

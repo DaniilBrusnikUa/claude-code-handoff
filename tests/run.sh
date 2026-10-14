@@ -48,6 +48,16 @@ check "size constant across renders ($s1 -> $s3)" '[ "$s1" = "$s3" ]'
 check "exactly one start marker" '[ "$(grep -c "^<!-- handoff:notes:start -->$" "$fa")" = 1 ]'
 check "quoted marker neutralised" 'grep -q "handoff‑notes:start" "$fa"'
 check "notes still the placeholder" 'grep -q "^_No notes yet" "$fa"'
+# Notes sidecar: secrets scrubbed in the rendered copy, a marker line inside the notes is harmless,
+# and an old compaction sidecar quoting the markers does not reopen the block.
+printf '%s\n' "**Goal**: t. password=hunter2 and AWS_SECRET_ACCESS_KEY=abcdef1234567890" "<!-- handoff:notes:start -->" "more" > "$dir/.state/aaaaaaaa.notes.md"
+printf '%s\n' "### 2026-01-02 11:30 (auto)" "quote: <!-- handoff:notes:start -->" "<!-- handoff:notes:end -->" "tail" > "$dir/.state/aaaaaaaa.compact.md"
+hook "$A" "$T/a.jsonl"
+check "notes: secret value scrubbed in the file" '! grep -q "hunter2" "$fa" && ! grep -q "abcdef1234567890" "$fa"'
+check "notes: sidecar keeps the raw text" 'grep -q "hunter2" "$dir/.state/aaaaaaaa.notes.md"'
+check "notes: still exactly one start marker with a marker in notes and compaction" '[ "$(grep -c "^<!-- handoff:notes:start -->$" "$fa")" = 1 ]'
+check "notes: the goal line survives" 'grep -q "Goal\*\*: t\." "$fa"'
+rm -f "$dir/.state/aaaaaaaa.notes.md" "$dir/.state/aaaaaaaa.compact.md"
 check "User turns counts the array prompt" 'grep -q "^- User turns: 2$" "$fa"'
 check "array prompt text shown" 'grep -q "second request with a picture" "$fa"'
 check "AWS secret redacted" '! grep -q "abcdefgh1234" "$fa"'

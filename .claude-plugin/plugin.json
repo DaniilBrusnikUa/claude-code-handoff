@@ -1,6 +1,6 @@
 {
   "name": "handoff",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Zero-token session handoff for Claude Code: a Stop hook writes one markdown file per session from the local transcript (requests, replies, files, git, cache numbers), SessionStart loads a compact version, /handoff:notes adds decisions and next steps.",
   "author": {
     "name": "Danylo Brusnik"

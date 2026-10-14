@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.1 — 2026-10-14
+- Notes are scrubbed for secrets in the rendered copy (the sidecar keeps the raw text); compaction sidecars written by older versions have their quoted markers neutralised on read.
+
 ## 0.4.0 — 2026-10-14
 - Notes: markers count only as whole lines and the block ends at the first end marker; markers quoted in replies are neutralised; bloated blocks heal on the next render (#1). Notes live in `.state/<root>.notes.md`, the file shows a copy; `/handoff:notes` writes the sidecar (`handoff-path.sh --notes`) (#6).
 - Deletes and renames touch only files named like a handoff and carrying the epoch marker; retention is skipped while other markdown files share the directory; `.frozen.md` and `.transcript` sidecars are never cleaned up (#2, #12).
