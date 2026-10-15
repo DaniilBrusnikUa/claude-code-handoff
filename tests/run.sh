@@ -69,6 +69,18 @@ rs="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, source:"resum
 check "resume: cold-resume note, no context injected" 'printf "%s" "$rs" | jq -e ".systemMessage | test(\"cold\") and test(\"232k\")" >/dev/null && ! printf "%s" "$rs" | jq -e ".hookSpecificOutput" >/dev/null 2>&1'
 rs="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, source:"resume", prompt_cache_likely_expired:false}' | "$S/load-handoff.sh")"
 check "resume: silent while the cache is warm" '[ -z "$rs" ]'
+# Auto-notes by context: fires once at 60%, again at 85%, re-arms after compaction.
+ctxt() { printf '%s\n' '{"type":"user","sessionId":"'"$A"'","timestamp":"2026-01-02T10:00:00.000Z","message":{"role":"user","content":"q"}}' \
+  '{"type":"assistant","sessionId":"'"$A"'","timestamp":"2026-01-02T10:00:05.000Z","requestId":"r9","message":{"role":"assistant","content":[{"type":"text","text":"a"}],"usage":{"input_tokens":10,"cache_creation_input_tokens":0,"cache_read_input_tokens":'"$1"',"output_tokens":5}}}' > "$T/ctx.jsonl"; }
+an() { jq -nc --arg s "$A" --arg t "$T/ctx.jsonl" --arg c "$proj" '{session_id:$s, transcript_path:$t, cwd:$c}' | CLAUDE_HANDOFF_AUTO_NOTES=context CLAUDE_HANDOFF_CONTEXT_WINDOW=200000 "$S/auto-notes.sh"; }
+rm -f "$dir/.state/aaaaaaaa.auto-notes"
+ctxt 50000;  check "auto-notes: quiet at 25%" '[ -z "$(an)" ]'
+ctxt 130000; check "auto-notes: fires at 65%" 'an | jq -e ".decision == \"block\"" >/dev/null'
+ctxt 140000; check "auto-notes: not again at 70%" '[ -z "$(an)" ]'
+ctxt 175000; check "auto-notes: fires at 87%" 'an | jq -e ".reason | test(\"87%\")" >/dev/null'
+ctxt 30000;  check "auto-notes: re-armed below 60% after compaction" '[ -z "$(an)" ] && [ "$(cat "$dir/.state/aaaaaaaa.auto-notes")" = 0 ]'
+ctxt 125000; check "auto-notes: fires again at 62%" 'an | jq -e ".decision == \"block\"" >/dev/null'
+rm -f "$dir/.state/aaaaaaaa.auto-notes" "$T/ctx.jsonl"
 check "User turns counts the array prompt" 'grep -q "^- User turns: 2$" "$fa"'
 check "array prompt text shown" 'grep -q "second request with a picture" "$fa"'
 check "AWS secret redacted" '! grep -q "abcdefgh1234" "$fa"'

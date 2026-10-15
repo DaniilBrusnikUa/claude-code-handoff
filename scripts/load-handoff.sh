@@ -124,9 +124,10 @@ if [ "$source" = "startup" ]; then
     if [ -z "$opens" ] && [ "$age" -lt 60 ]; then
       :
     elif [ -n "$opens" ] && [ "$age" -lt 86400 ]; then
-      printf '\nNote for the user: session(s) %s of the newest handoff appear to be open in another terminal (last reply %s ago). Do not resume them here; keep working in that terminal, or continue their file in this session with /handoff:load.\n' "$opens" "$(age_text "$age")"
+      printf '\nNote for the user: session(s) %s of "%s" appear to be open in another terminal (last reply %s ago). Do not resume them here; keep working in that terminal, or continue their file in this session with /handoff:load.\n' "$opens" "$(sed -n '1s/^# Handoff: //p' "$newest")" "$(age_text "$age")"
     elif [ "$age" -lt 3300 ]; then
-      printf '\nNote for the user: session %s closed %s ago, so its prompt cache is probably still warm (1 h TTL). Resuming it with `claude -r %s` would avoid a cold start of its whole history; starting fresh here pays only the small fixed prefix plus this handoff.\n' "${fsid:0:8}" "$(age_text "$age")" "$fsid"
+      ntitle="$(sed -n '1s/^# Handoff: //p' "$newest")"
+      printf '\nNote for the user: "%s" closed %s ago, so its prompt cache is probably still warm (1 h TTL). Resuming it with `claude -r %s` would avoid a cold start of its whole history; starting fresh here pays only the small fixed prefix plus this handoff.\n' "${ntitle:-session ${fsid:0:8}}" "$(age_text "$age")" "$fsid"
     fi
   fi
 fi

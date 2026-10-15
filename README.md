@@ -65,7 +65,7 @@ A new session with the handoff beats a cold resume (table above) as soon as the 
 
 <p align="center"><img src="docs/list.svg" alt="/handoff:list output: numbered threads with status, date, title, age, branch and id" width="820"></p>
 
-5. **Notes.** `/handoff:notes` fills the one block a script cannot write; later rewrites preserve it.
+5. **Notes.** `/handoff:notes` fills the one block a script cannot write: goal, done, decisions and why, next action. Set `CLAUDE_HANDOFF_AUTO_NOTES=context` and it happens by itself at 60% and 85% of the context window, one model turn each.
 6. **Exit.** `SessionEnd` removes the session's open mark. The file shows 🟢 while any session of the thread is open, ⚪ saved once all are closed.
 
 ## Commands
@@ -112,7 +112,7 @@ Settings are environment variables. Put them in the `env` block of `~/.claude/se
 | `CLAUDE_HANDOFF_IN_PROJECT` | `true` | `true`: `<project>/.claude/handoffs/`. `false`: `~/.claude/handoffs/<project-slug>/`, nothing written inside the project. |
 | `CLAUDE_HANDOFF_DIR` | unset | Explicit directory (absolute, `~/…`, or relative to the project). Overrides the two above. |
 | `CLAUDE_HANDOFF_AUTOLOAD` | `compact` | What the session start injects. `compact`: notes, compaction summary, last reply, index. `full`: the whole file. `false`: nothing. |
-| `CLAUDE_HANDOFF_AUTO_NOTES` | `0` | `N`: every N user turns Claude is kept going one more step to update the notes block. Costs a model turn each time. |
+| `CLAUDE_HANDOFF_AUTO_NOTES` | `0` | `context`: when the context crosses 60% and then 85% of the window (once per threshold, re-armed after a compaction) Claude is kept going one more step to update the notes, so they are fresh when compaction comes. `N`: every N user turns. Each update is a model turn. `CLAUDE_HANDOFF_AUTO_NOTES_AT="60,85"`, `CLAUDE_HANDOFF_CONTEXT_WINDOW=200000` tune it. |
 | `CLAUDE_HANDOFF_HEADLESS` | unset | `true` runs the plugin in `claude -p` / SDK sessions too. |
 | `CLAUDE_HANDOFF_KEEP` | `50` | Thread files kept per project (counts files, not days); older ones deleted, and only handoff files, only while the directory holds nothing else. Values 1–4 are raised to 5; `0` disables. |
 | `CLAUDE_HANDOFF_INDEX` | `5` | Threads listed at session start. |
@@ -187,7 +187,7 @@ The plugin does not replace `--resume`: within the hour, resuming is the cheapes
 
 **What happens after Claude Code deletes old transcripts?** Claude Code keeps transcripts `cleanupPeriodDays` (30 by default). A single-session file is never rewritten after its session ended, so it keeps its content. A thread file is rewritten by every session in it, so the plugin keeps a snapshot of each complete render in `.state/<root>.frozen.md`; when a member's transcript is gone, the snapshot is appended as `## Archived history` instead of being lost.
 
-**Why isn't the notes block written automatically?** Everything a script can know is already automatic. The notes need judgment (what mattered, what was rejected, what comes next), and that is a model turn. Run `/handoff:notes` when it is worth it, or set `CLAUDE_HANDOFF_AUTO_NOTES=N` to have it done every N turns.
+**Why isn't the notes block written automatically?** Everything a script can know is already automatic. The notes need judgment (what mattered, what was rejected, what comes next), and that is a model turn. Run `/handoff:notes` when it is worth it, or set `CLAUDE_HANDOFF_AUTO_NOTES=context` to have it done at 60% and 85% of the context window, right before the information would be compacted away.
 
 **Two terminals in the same project?** Each session has its own file unless it joined a thread. The index at start lists both; the status says which are open.
 

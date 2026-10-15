@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1 — 2026-10-15
+- `CLAUDE_HANDOFF_AUTO_NOTES=context`: notes updated by Claude when the context crosses 60% and 85% of the window, once per threshold, re-armed after compaction (`_AUTO_NOTES_AT`, `_CONTEXT_WINDOW`).
+- Start hints name the thread by its title; the session id stays only inside the `claude -r` command.
+
 ## 0.5.0 — 2026-10-14
 - Status bar: context percentage, and a `/handoff:notes` nudge at 70% context or 90% of the 5-hour limit (`CLAUDE_HANDOFF_NUDGE_CONTEXT`, `_NUDGE_LIMIT`). These fields reach only the status line, so this is zero tokens.
 - `SessionStart` on `resume`: a one-line note with the cost of a cold resume, from the `prompt_cache_likely_expired` / `estimated_cache_write_usd` fields Claude Code passes; silent while the cache is warm.
