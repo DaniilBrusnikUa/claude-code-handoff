@@ -44,6 +44,8 @@ Three words you will meet:
 2. **Work.** After every reply the file is rewritten. Nothing to do.
 3. **Status bar.** `handoff ● <title> · ctx 41%`. At 70% of the context, or 80% of the 5-hour limit, it adds `→ /handoff:notes`. [Setup](docs/INTERNALS.md#status-bar).
 4. **Notes.** Before a long break, `/handoff:notes`: one turn, Claude writes goal, done, decisions and why, open questions, next action. Or set `CLAUDE_HANDOFF_AUTO_NOTES=context` and it happens by itself at 60% and 85% of the context window, right before that information would be compacted away.
+
+   > **Without notes the handoff is a record, not a plan.** The hooks capture what happened (requests, replies, files, git, the compaction summary) at zero cost, but not what it meant: the goal, the decisions, the next step. That part needs a model turn. Run `/handoff:notes` before you leave, or turn on `CLAUDE_HANDOFF_AUTO_NOTES=context` once and forget about it.
 5. **Compaction.** When Claude Code compacts the context, the summary it wrote is kept in the file.
 6. **Exit.** Close the terminal or let the laptop sleep: the file is already current. It shows 🟢 while a session is open, ⚪ once closed.
 
