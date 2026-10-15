@@ -30,7 +30,7 @@ Measured in one real session (Claude Fable 5.1, 1-hour cache; history 236k token
 
 Rates are Fable 5.1's: cache read 0.025× the input price, 1-hour cache write 2×, $10 per million input tokens. Opus and Sonnet 5.5 read at 0.05×, older models at 0.1×; 5-minute cache writes cost 1.25×. The 25k system prefix was a warm read at every one of 17 session starts measured, so a fresh session wins once the history exceeds the session-specific prefix, about 20k tokens. Usage limits are drawn on every request for the whole context; Anthropic does not publish the weighting, so treat the dollar column as the upper bound of the ratio, not as your limit. In 10 days of the author's transcripts, 12 resumes after breaks of 45 minutes or more wrote 4.0M tokens cold, about $80 at API prices; with the handoff the same 12 restarts would have cost about 0.5M.
 
-<p align="center"><img src="docs/session-start.svg" alt="A new session: the numbered list of recent sessions in the terminal, the user types 1, Claude joins that session's file and shows its header and notes" width="820"></p>
+<p align="center"><img src="docs/session-start.svg?v=0.6.0" alt="A new session: the numbered list of recent sessions in the terminal, the user types 1, Claude joins that session's file and shows its header and notes" width="820"></p>
 
 ## First session
 
@@ -61,7 +61,7 @@ At start, type the number. Later, `/handoff:list` to pick, `/handoff:load <n>` i
 
 ## The file
 
-<p align="center"><img src="docs/handoff-file.svg" alt="A handoff file: title, Next line, header with thread and status, notes, last reply, tokens table" width="820"></p>
+<p align="center"><img src="docs/handoff-file.svg?v=0.6.0" alt="A handoff file: title, Next line, header with thread and status, notes, last reply, tokens table" width="820"></p>
 
 ```
 # Handoff: <title of the first session>
