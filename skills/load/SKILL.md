@@ -1,6 +1,6 @@
 ---
 name: load
-description: Continue a previous session's handoff file in this session: the file is loaded into the conversation and this session joins its thread, so the hooks keep writing into that same file instead of creating a new one. Chosen by number from /handoff:list, by session id, or by part of its name.
+description: Continue an earlier session by its number from /handoff:list, its id or part of its name: Claude reads its handoff file and this session writes into that file from now on.
 argument-hint: <number | session id | part of the file name>
 ---
 

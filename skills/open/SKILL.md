@@ -1,6 +1,6 @@
 ---
 name: open
-description: Open the current session's handoff file in the editor / default app, or show its path. Use when the user asks to open, see or find the handoff file of this session.
+description: Open this session's handoff file in the default app, or print its path. Use when the user asks to open, see or find the handoff file.
 ---
 
 Run:

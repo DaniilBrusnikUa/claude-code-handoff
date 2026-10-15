@@ -1,6 +1,6 @@
 ---
 name: notes
-description: Record decisions, open questions and next steps for the next Claude Code session. Use before a long break, before /clear, or when the user asks to save progress, write a handoff, or leave notes for later. The automatic part (requests, replies, files, git) is already captured by the plugin's Stop hook; this skill adds the judgment that only the model has.
+description: Write the notes of the handoff file: goal, done, decisions and why, open questions, next action. Use before a long break, before /clear, or when the user asks to save progress or leave notes. Everything else in the file is already written by the hooks.
 ---
 
 # Handoff notes

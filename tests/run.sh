@@ -61,12 +61,21 @@ rm -f "$dir/.state/aaaaaaaa.notes.md" "$dir/.state/aaaaaaaa.compact.md"
 # Status line nudges and the cold-resume note (fields only the status line / a resume start receive).
 sl="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, context_window:{used_percentage:72.4}, rate_limits:{five_hour:{used_percentage:91}}}' | "$S/statusline.sh")"
 check "statusline: context percentage shown" 'printf "%s" "$sl" | grep -q "ctx 72%"'
-check "statusline: notes nudge at 70% context" 'printf "%s" "$sl" | grep -q "/handoff:notes before compaction"'
-check "statusline: notes nudge at 90% of the 5-hour limit" 'printf "%s" "$sl" | grep -q "5h limit 91%"'
+check "statusline: notes nudge at 70% context" 'printf "%s" "$sl" | grep -q "ctx 72% → /handoff:notes"'
+check "statusline: soft nudge at 91% of the 5-hour limit" 'printf "%s" "$sl" | grep -q "5h 91% → /handoff:notes"'
+check "statusline: title, no path" 'printf "%s" "$sl" | grep -q "^handoff ● Test thread: one/two" && ! printf "%s" "$sl" | grep -q "$dir"'
+sl="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, rate_limits:{five_hour:{used_percentage:96}, seven_day:{used_percentage:92}}}' | "$S/statusline.sh")"
+check "statusline: hard nudge at 96% and the 7-day limit" 'printf "%s" "$sl" | grep -q "5h 96% → notes now · 7d 92%"'
+sl="$(CLAUDE_CODE_SESSION_ID="$B" jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c}' | CLAUDE_CODE_SESSION_ID="$B" "$S/statusline.sh")"
+check "statusline: stdin session id wins over a stale environment" 'printf "%s" "$sl" | grep -q "Test thread"'
+sl="$(jq -nc --arg c "$proj" '{session_id:"99999999-9999-4999-8999-999999999999", cwd:$c}' | "$S/statusline.sh")"
+check "statusline: no file yet" '[ "$sl" = "handoff ○ after first reply" ]'
 sl="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, context_window:{used_percentage:12}}' | "$S/statusline.sh")"
 check "statusline: no nudge at 12%" '! printf "%s" "$sl" | grep -q "/handoff:notes"'
 rs="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, source:"resume", prompt_cache_likely_expired:true, context_tokens:232000, estimated_cache_write_usd:"4.64", seconds_since_last_response:5400}' | "$S/load-handoff.sh")"
-check "resume: cold-resume note, no context injected" 'printf "%s" "$rs" | jq -e ".systemMessage | test(\"cold\") and test(\"232k\")" >/dev/null && ! printf "%s" "$rs" | jq -e ".hookSpecificOutput" >/dev/null 2>&1'
+check "resume: cold-resume note, no context injected" 'printf "%s" "$rs" | jq -e ".systemMessage | test(\"cold\") and test(\"232k\") and test(\"Ctrl\\\\+C\")" >/dev/null && ! printf "%s" "$rs" | jq -e ".hookSpecificOutput" >/dev/null 2>&1'
+rs="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, source:"fork", prompt_cache_likely_expired:true, context_tokens:150000.5, estimated_cache_write_usd:3}' | "$S/load-handoff.sh")"
+check "resume: float context_tokens does not break the note" 'printf "%s" "$rs" | jq -e ".systemMessage | test(\"150k\")" >/dev/null'
 rs="$(jq -nc --arg s "$A" --arg c "$proj" '{session_id:$s, cwd:$c, source:"resume", prompt_cache_likely_expired:false}' | "$S/load-handoff.sh")"
 check "resume: silent while the cache is warm" '[ -z "$rs" ]'
 # Auto-notes by context: fires once at 60%, again at 85%, re-arms after compaction.
@@ -80,6 +89,12 @@ ctxt 140000; check "auto-notes: not again at 70%" '[ -z "$(an)" ]'
 ctxt 175000; check "auto-notes: fires at 87%" 'an | jq -e ".reason | test(\"87%\")" >/dev/null'
 ctxt 30000;  check "auto-notes: re-armed below 60% after compaction" '[ -z "$(an)" ] && [ "$(cat "$dir/.state/aaaaaaaa.auto-notes")" = 0 ]'
 ctxt 125000; check "auto-notes: fires again at 62%" 'an | jq -e ".decision == \"block\"" >/dev/null'
+rm -f "$dir/.state/aaaaaaaa.auto-notes"
+# Window derived from the transcript: a request above 200k means the 1M window.
+ctxt 300000; an1="$(jq -nc --arg s "$A" --arg t "$T/ctx.jsonl" --arg c "$proj" '{session_id:$s, transcript_path:$t, cwd:$c}' | CLAUDE_HANDOFF_AUTO_NOTES=context "$S/auto-notes.sh")"
+check "auto-notes: 300k request implies the 1M window (30%, quiet)" '[ -z "$an1" ]'
+ctxt 700000; an1="$(jq -nc --arg s "$A" --arg t "$T/ctx.jsonl" --arg c "$proj" '{session_id:$s, transcript_path:$t, cwd:$c}' | CLAUDE_HANDOFF_AUTO_NOTES=context "$S/auto-notes.sh")"
+check "auto-notes: 700k of 1M fires at 70%" 'printf "%s" "$an1" | jq -e ".reason | test(\"70%\")" >/dev/null'
 rm -f "$dir/.state/aaaaaaaa.auto-notes" "$T/ctx.jsonl"
 check "User turns counts the array prompt" 'grep -q "^- User turns: 2$" "$fa"'
 check "array prompt text shown" 'grep -q "second request with a picture" "$fa"'
@@ -94,7 +109,7 @@ hook "$A" "$T/a.jsonl"
 check "notes from the sidecar rendered" 'grep -q "^\*\*Goal\*\*: test notes$" "$fa" && grep -q "^\*\*Next\*\*: keep going$" "$fa"'
 check "marker pasted into the sidecar dropped" '[ "$(grep -c "^<!-- handoff:notes:start -->$" "$fa")" = 1 ]'
 sn1="$(wc -c < "$fa")"; hook "$A" "$T/a.jsonl"
-check "size constant with notes" '[ "$sn1" = "$(wc -c < "$fa")" ] && [ "$(grep -c "test notes" "$fa")" = 1 ]'
+check "size constant with notes" '[ "$sn1" = "$(wc -c < "$fa")" ] && [ "$(grep -c "^\*\*Goal\*\*: test notes" "$fa")" = 1 ]'
 
 # ---- 3. a bloated block from an older version heals and seeds the sidecar -------------
 transcript "$B" "$T/b.jsonl"
@@ -135,9 +150,10 @@ export CLAUDE_CODE_SESSION_ID="$C"
 transcript "$C" "$T/c.jsonl"; hook "$C" "$T/c.jsonl"
 fc="$(ls "$dir"/*_cccccccc.md | head -1)"
 "$S/handoff-list.sh" "$proj" > "$T/list.txt"
-check "list prints root ids" 'grep -q "id cccccccc" "$T/list.txt" && grep -q "id aaaaaaaa" "$T/list.txt"'
-check "index saved for the session" '[ -s "$dir/.state/cccccccc.index" ]'
-nA="$(grep -n "_aaaaaaaa.md" "$T/list.txt" | cut -d: -f1 | head -1)"
+check "list: number, title, age columns" 'grep -Eq "^1  Test thread: one/two +[0-9]+ (min|h|d)" "$T/list.txt"'
+check "list: no ids, no file names" '! grep -q "aaaaaaaa" "$T/list.txt"'
+check "index saved for the session, one line per file" '[ "$(wc -l < "$dir/.state/cccccccc.index" | tr -d " ")" = "$(ls "$dir"/*.md | grep -vc LATEST)" ] && [ "$(sort -u "$dir/.state/cccccccc.index" | wc -l | tr -d " ")" = "$(wc -l < "$dir/.state/cccccccc.index" | tr -d " ")" ]'
+nA="$(grep -n "_aaaaaaaa.md" "$dir/.state/cccccccc.index" | cut -d: -f1 | head -1)"
 touch "$fb"   # another session writes: the order changes, the number must not
 out="$("$S/handoff-show.sh" --adopt "$nA" "$proj" 2>"$T/err.txt")"
 check "adopt by number joins the file the list showed" 'grep -q "joined thread aaaaaaaa" "$T/err.txt"'
@@ -173,7 +189,61 @@ check "stale lock is taken over" 'take_lock "$dir" "$A" && release_lock "$dir" "
 check "--version prints a version" '"$S/save-handoff.sh" --version | grep -Eq "^[0-9]+\.[0-9]+"'
 check "project slug percent-encodes" '[ "$(project_slug "/a b/c-d")" = "a%20b%2Fc-d" ]'
 
-# ---- 8. scrub patterns -----------------------------------------------------------
+# ---- 8. start screen, index once, ordering by epoch ----------------------------------
+# Untangle the threads of section 5: A and C become plain single-session roots again.
+rm -f "$dir/.state/cccccccc.adopt" "$dir/.state/aaaaaaaa.adopt" "$dir/.state/aaaaaaaa.members" "$dir/.state/bbbbbbbb.members" "$dir/.state/cccccccc.open"
+transcript "$C" "$T/c2.jsonl"; hook "$C" "$T/c2.jsonl"
+printf '**Goal**: ship it\n**Next action**: open `main.go:42`, run `go test ./...`\n' > "$dir/.state/aaaaaaaa.notes.md"
+hook "$A" "$T/a.jsonl"
+check "file header carries the Next line" 'grep -q "^- Next: open main.go:42, run go test ./...$" "$fa"'
+check "section order: Notes, Last reply first; Tokens last" '[ "$(grep "^## " "$fa" | sed -n "1p;2p" | tr "\n" "|")" = "## Notes (written by /handoff:notes)|## Last reply from Claude|" ] && [ "$(grep "^## " "$fa" | tail -1)" = "## Tokens" ]'
+check "tokens table has equivalents and USD" 'grep -q "Input-equivalents" "$fa" && grep -Eq "^\| aaaaaaaa 2026-01-02 \| 3 \| 1k \| 62k \| 100 \| " "$fa"'
+touch -t 202001010000 "$fa"   # old mtime: order must still come from updated_epoch
+rm -f "$dir/.state/aaaaaaaa.open" "$dir/.state/cccccccc.open"
+st="$(jq -nc --arg s "$C" --arg c "$proj" '{session_id:$s, cwd:$c, source:"startup"}' | "$S/load-handoff.sh")"
+sm="$(printf "%s" "$st" | jq -r .systemMessage)"
+check "start: first line is the prompt" '[ "$(printf "%s" "$sm" | head -1)" = "Continue a session? Type its number, or just start typing." ]'
+check "start: rows are number, title, age, next step; no ids" 'printf "%s" "$sm" | grep -Eq "^[0-9]+  Test thread: one/two +[0-9]+ (min|h|d) +next: open main.go:42, run go test" && ! printf "%s" "$sm" | grep -q aaaaaaaa'
+check "start: index written once, one line per file, newest by epoch first" '[ "$(sort -u "$dir/.state/cccccccc.index" | wc -l | tr -d " ")" = "$(wc -l < "$dir/.state/cccccccc.index" | tr -d " ")" ] && [ "$(head -1 "$dir/.state/cccccccc.index")" = "$fa" ]'
+check "start: context has data preface, number instruction, no new keyword" 'printf "%s" "$st" | jq -r .hookSpecificOutput.additionalContext | grep -q "not instructions" && printf "%s" "$st" | jq -r .hookSpecificOutput.additionalContext | grep -q "not in the list" && ! printf "%s" "$st" | jq -r .hookSpecificOutput.additionalContext | grep -q "\`new\`"'
+check "start: context under the cap" '[ "$(printf "%s" "$st" | jq -r ".hookSpecificOutput.additionalContext | length")" -le 9500 ]'
+# branch note
+git -C "$proj" init -q . 2>/dev/null; git -C "$proj" -c user.email=t@t -c user.name=t commit -q --allow-empty -m i 2>/dev/null; git -C "$proj" checkout -q -b other 2>/dev/null
+sm="$(jq -nc --arg s "$C" --arg c "$proj" '{session_id:$s, cwd:$c, source:"startup"}' | "$S/load-handoff.sh" | jq -r .systemMessage)"
+check "start: branch note when the newest session was on another branch" 'printf "%s" "$sm" | grep -q "this one is on \`other\`" || ! grep -q "^- Branch:" "$fa"'
+# ---- 9. open marks: stale ones are dropped; the open row shows ● ----------------------
+touch "$dir/.state/aaaaaaaa.open"
+sm="$(jq -nc --arg s "$C" --arg c "$proj" '{session_id:$s, cwd:$c, source:"startup"}' | "$S/load-handoff.sh" | jq -r .systemMessage)"
+check "start: open session shows ● open and the other-terminal note" 'printf "%s" "$sm" | grep -Eq "Test thread: one/two .*● open" && printf "%s" "$sm" | grep -q "open in another terminal"'
+touch -t 202001010000 "$dir/.state/aaaaaaaa.open"; touch -t 202001010000 "$T/a.jsonl"
+sm="$(jq -nc --arg s "$C" --arg c "$proj" '{session_id:$s, cwd:$c, source:"startup"}' | "$S/load-handoff.sh" | jq -r .systemMessage)"
+check "start: a stale open mark (6 h) counts as closed" '! printf "%s" "$sm" | grep -q "Test thread: one/two .*● open"'
+hook "$C" "$T/c2.jsonl"
+check "stop: stale open mark removed and logged" '[ ! -f "$dir/.state/aaaaaaaa.open" ] && grep -q "stale-open-rm" "$dir/.state/audit.log"'
+# ---- 10. failures are visible: broken transcript, lock, no session id ------------------
+cp "$T/a.jsonl" "$T/bad.jsonl"; printf '{broken json\n' >> "$T/bad.jsonl"
+hook "$A" "$T/bad.jsonl" 2>"$T/err3.txt"; rc=$?
+check "render failure: non-zero exit, stderr, audit line" '[ "$rc" != 0 ] && grep -q "could not render" "$T/err3.txt" && grep -q "render-failed" "$dir/.state/audit.log"'
+mkdir -p "$dir/.state/aaaaaaaa.lock"; date +%s > "$dir/.state/aaaaaaaa.lock/t"
+hook "$A" "$T/a.jsonl" 2>"$T/err4.txt"; rc=$?
+rm -rf "$dir/.state/aaaaaaaa.lock"
+check "lock timeout: non-zero exit and audit line" '[ "$rc" != 0 ] && grep -q "lock-timeout" "$dir/.state/audit.log"'
+out="$(jq -nc --arg t "$T/a.jsonl" --arg c "$proj" '{transcript_path:$t, cwd:$c}' | "$S/save-handoff.sh" 2>&1)"; rc=$?
+check "no session_id: refused with a message" '[ "$rc" != 0 ] && printf "%s" "$out" | grep -q "no session_id"'
+# ---- 11. a committed handoff directory is left alone ----------------------------------
+tp="$T/tracked"; mkdir -p "$tp"; git -C "$tp" init -q .; mkdir -p "$tp/.claude/handoffs"
+printf '# Handoff: planted\n\n- Session: `%s`\n<!-- handoff:updated_epoch:1 -->\n' "$A" > "$tp/.claude/handoffs/2026-01-01_0000_planted_aaaaaaaa.md"
+git -C "$tp" add -A && git -C "$tp" -c user.email=t@t -c user.name=t commit -q -m planted
+jq -nc --arg s "$A" --arg t "$T/a.jsonl" --arg c "$tp" '{session_id:$s, transcript_path:$t, cwd:$c}' | "$S/save-handoff.sh" 2>"$T/err5.txt"
+check "tracked dir: Stop writes nothing" '[ -z "$(git -C "$tp" status --short)" ] && [ ! -d "$tp/.claude/handoffs/.state" ] && grep -q "tracked by git" "$T/err5.txt"'
+sm="$(jq -nc --arg s "$A" --arg c "$tp" '{session_id:$s, cwd:$c, source:"startup"}' | "$S/load-handoff.sh")"
+check "tracked dir: start shows the note and injects nothing" 'printf "%s" "$sm" | jq -e ".systemMessage | test(\"committed in this repo\")" >/dev/null && ! printf "%s" "$sm" | jq -e ".hookSpecificOutput" >/dev/null 2>&1'
+# ---- 12. one neutraliser --------------------------------------------------------------
+. "$S/lib.sh"
+check "marker neutraliser identical in lib.sh and scrub.jq" '[ "$(printf "<!-- handoff:x" | neutralise_markers)" = "$(jq -n -L "$S" "include \"scrub\"; \"<!-- handoff:x\" | scrub" -r)" ]'
+check "control characters stripped from titles on read" '[ "$(printf "# Handoff: a\033[31mb\n" > "$T/t.md"; file_title "$T/t.md")" = "a[31mb" ]'
+
+# ---- 13. scrub patterns -----------------------------------------------------------
 # Fake tokens are glued from pieces so secret scanners do not flag this file.
 gh_pat="github""_pat_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234"; sk="sk""_live_ABCDEFGHIJ1234"
 gk="AI""zaSyA1234567890abcdefghijklmnopqrstuv"; gl="gl""pat-ABCDEFGHIJKLMNOPQRST"

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — 2026-10-15
+- Start screen: one line per session with title, age and the next action from its notes, or `● open`; no dates, ids or branch columns; untitled 0-turn sessions skipped; sessions ordered by their `updated_epoch`, not file mtime; the numbered list is written to `.state/<session>.index` once, so numbers stay valid; `new` keyword dropped, just type your task. One-line cache tip (`claude -r <id>` is cheaper), its window from the transcript's cache TTL (5 min or 1 h); a note when the newest file is on another branch; open marks older than 6 h without activity count as closed. Cold `--resume` / fork note made actionable (Ctrl+C, `claude`, the number).
+- Status bar: short form `handoff ● <title> (+N) · ctx 41%`; `→ /handoff:notes` at 70% context or 80% of the 5-hour limit, `notes now` at 95%, 7-day limit shown from 90% (`CLAUDE_HANDOFF_NUDGE_LIMIT_HARD`, `_NUDGE_WEEK`); stdin session id wins over a stale environment.
+- File: `- Next:` line in the header from the notes' next action; section order Notes, Last reply, Earlier replies, Requests, Files, Git, Compaction, Tokens; Tokens per session and total with input-equivalents and ≈ USD (`CLAUDE_HANDOFF_RATE_READ/_WRITE/_OUTPUT`, `_PRICE_PER_M`), calls sorted by time; auto-notes derives a 1M window when a request exceeded 200k.
+- Robustness: a failed render or a lock timeout is audited and reported on stderr instead of a silent exit; the Stop hook writes nothing into a committed `.claude/handoffs/` and the start says so; one marker neutraliser shared by the shell and jq paths; the transcript flush wait stops early (1 s instead of 2.8 s on a 9 MB transcript); empty session ids rejected.
+- Cost table corrected: the 25k system prefix is a warm read at every start, so a new session with the handoff costs ~38k input-equivalents, not 85k; break-even ~20k of history, not 40–50k. Rates named per model.
+- Docs: README restructured for first-time readers; internals moved to `docs/INTERNALS.md`; images re-rendered from the current output.
+
 ## 0.5.1 — 2026-10-15
 - `CLAUDE_HANDOFF_AUTO_NOTES=context`: notes updated by Claude when the context crosses 60% and 85% of the window, once per threshold, re-armed after compaction (`_AUTO_NOTES_AT`, `_CONTEXT_WINDOW`).
 - Start hints name the thread by its title; the session id stays only inside the `claude -r` command.

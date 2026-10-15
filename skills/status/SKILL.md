@@ -1,6 +1,6 @@
 ---
 name: status
-description: Show which handoff file this session writes to, its thread (sessions sharing the file), status and which sessions are open now. Use when the user asks where the handoff is being written, whether it is working, or what the current thread is.
+description: Show which handoff file this session writes to, which sessions share it, its status and which of them are open now. Use when the user asks where the handoff is written or whether it is working.
 ---
 
 Run and show the output as a code block:

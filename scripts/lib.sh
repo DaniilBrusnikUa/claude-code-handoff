@@ -114,14 +114,21 @@ is_handoff_file() {
   grep -q '^<!-- handoff:updated_epoch:' "$1" 2>/dev/null
 }
 
-# session_files <dir> -> handoff files, newest first. `ls -t` is parsed on purpose: file
-# names come from title_slug, which strips whitespace and control characters, so one line
-# is one file; everything else (LATEST.md, the user's own markdown) is filtered out.
+# file_mtime <file> -> modification time as epoch seconds (BSD and GNU date both take -r)
+file_mtime() { date -r "$1" +%s 2>/dev/null || printf '0'; }
+
+# session_files <dir> -> handoff files, newest first by the updated_epoch each file carries
+# (a copied or synced directory keeps that order; mtime is only the fallback). File names
+# come from title_slug, which strips whitespace and control characters, so one line is one
+# file; everything else (LATEST.md, the user's own markdown) is filtered out.
 session_files() {
-  local f
-  ls -t "$1"/*.md 2>/dev/null | while IFS= read -r f; do
-    is_handoff_file "$f" && printf '%s\n' "$f"
-  done
+  local f ep
+  for f in "$1"/*.md; do
+    is_handoff_file "$f" || continue
+    ep="$(epoch_of "$f")"
+    case "$ep" in ''|*[!0-9]*|0) ep="$(file_mtime "$f")" ;; esac
+    printf '%s\t%s\n' "$ep" "$f"
+  done 2>/dev/null | sort -t "$(printf '\t')" -k1,1nr -k2,2 | cut -f2-
 }
 
 # foreign_md_files <dir> -> markdown files in the directory that are not handoff files
@@ -183,6 +190,77 @@ notes_of() { notes_block_of "$1" | grep -v '^_No notes yet'; }
 # leading blank lines (the model may paste the markers in; they are not part of the notes)
 sidecar_notes() {
   grep -v -e "^$NOTES_START\$" -e "^$NOTES_END\$" -e '^_No notes yet' "$1" 2>/dev/null | sed -e '/./,$!d'
+}
+
+# MARK_NEUTRAL: what a marker quoted in a reply, a summary or the notes becomes on the way
+# into the file ("<!-- handoff:" with the colon replaced by U+2011). scrub.jq carries the same
+# literal; tests check the two stay byte-identical.
+MARK_NEUTRAL='<!-- handoff‑'
+neutralise_markers() { sed "s/<!-- handoff:/$MARK_NEUTRAL/g"; }
+
+# ---- text read back from files ------------------------------------------------------
+# Everything printed to the terminal or injected into a session passes through here: control
+# characters out (a title is model text; a cloned repository may carry anything).
+clean_text() { tr -d '\000-\010\013-\037\177'; }
+
+# plain_md -> one line of notes without its markdown dressing: bold, code, list bullet,
+# heading marks, the "Next action:" label itself
+plain_md() {
+  sed -e 's/\*\*//g' -e 's/`//g' -e 's/^[[:space:]]*[-*] //' -e 's/^#* *//' -e 's/^[0-9]*\. //' -e 's/^[Nn]ext action *: *//' -e 's/^[[:space:]]*//'
+}
+
+# utf8_locale -> a UTF-8 locale that exists on this machine, so ${#s} and ${s:0:n} count
+# characters (hooks often run with LANG unset); "" when none is available
+utf8_locale() {
+  local l
+  for l in C.UTF-8 en_US.UTF-8 UTF-8; do
+    if [ "$(LC_ALL=$l bash -c 's=é; printf %s "${#s}"' 2>/dev/null)" = 1 ]; then printf '%s' "$l"; return; fi
+  done
+}
+
+# file_title <file> -> the title line, cleaned, or "untitled" (the writer stores "untitled session")
+file_title() {
+  local t
+  t="$(sed -n '1s/^# Handoff: //p' "$1" | clean_text)"
+  case "$t" in ''|'untitled session') printf 'untitled' ;; *) printf '%s' "$t" ;; esac
+}
+
+# next_of_notes <dir> <root id> -> the one line that says what comes next: the "Next action"
+# line of the thread's notes, else the first non-empty notes line; markdown stripped, ≤ 60 chars
+# [file] is read when the thread has no sidecar yet (files written by older versions).
+next_of_notes() {
+  local nf="$(notes_sidecar "$1" "$2")" l="" text=""
+  if [ -s "$nf" ]; then text="$(sidecar_notes "$nf")"
+  elif [ -n "${3:-}" ] && [ -f "$3" ]; then text="$(notes_of "$3")"; fi
+  [ -n "$text" ] || return 0
+  # Preference: the "Next action" line, then the first item under "Next steps", then the first line.
+  l="$(printf '%s\n' "$text" | grep -i -m1 'next action' | plain_md)"
+  [ -n "$l" ] || l="$(printf '%s\n' "$text" | awk 'f && NF { print; exit } { if (match(tolower($0), /next steps?[^:]*:[[:space:]]*/)) { rest = substr($0, RSTART + RLENGTH); if (rest ~ /[^[:space:]*]/) { print rest; exit } f = 1 } }' | plain_md)"
+  [ -n "$l" ] || l="$(printf '%s\n' "$text" | grep -v '^[[:space:]]*$' | head -1 | plain_md)"
+  # Drop the label itself ("Next action:", "1.", "- ") so only the step remains.
+  l="$(printf '%s' "$l" | awk '{ s = $0; if (match(tolower(s), /^[[:space:]]*(next action|next steps?)[[:space:]]*:?[[:space:]]*/)) s = substr(s, RLENGTH + 1); sub(/^[[:space:]]*([0-9]+[.)]|[-*])[[:space:]]*/, "", s); print s }')"
+  # The line goes into the file header and the terminal: scrubbed like every other copy of user text.
+  printf '%s' "$l" | clean_text | jq -Rr -L "$(dirname "${BASH_SOURCE[0]}")" 'include "scrub"; scrub' 2>/dev/null | cut -c1-60
+}
+
+# cache_ttl <transcript> -> 300 when the last request was cached on the 5-minute tier only,
+# else 3600 (the 1-hour tier that subscriptions get within their included usage)
+cache_ttl() {
+  local u
+  u="$(tail -n 200 "$1" 2>/dev/null | jq -r 'select(.type == "assistant" and .message.usage != null) | .message.usage.cache_creation // {} | "\(.ephemeral_5m_input_tokens // 0) \(.ephemeral_1h_input_tokens // 0)"' 2>/dev/null | tail -1)"
+  case "$u" in
+    "0 0"|"") printf '3600' ;;
+    *" 0") printf '300' ;;
+    *) printf '3600' ;;
+  esac
+}
+
+# tracked_in_git <dir> <cwd> -> 0 when the handoff directory holds files tracked by the
+# project's repository (someone committed it): the plugin then writes nothing there
+tracked_in_git() {
+  [ -d "$1" ] || return 1
+  git -C "$2" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+  [ -n "$(git -C "$2" ls-files -- "$1" 2>/dev/null | head -1)" ]
 }
 
 # ---- age / status ------------------------------------------------------------------
@@ -340,11 +418,26 @@ transcript_is_headless() {
 open_mark() { printf '%s/.state/%s.open' "$1" "${2:0:8}"; }
 closed_mark() { printf '%s/.state/%s.closed' "$1" "${2:0:8}"; }
 
-# open_members <dir> <root id> -> short ids of the thread's sessions that have an open mark
+# session_is_open <dir> <session id> -> 0 when the session has an open mark that is not stale.
+# A crash leaves the mark behind (SessionEnd never ran): it counts only while the mark or the
+# session's transcript was touched in the last 6 hours.
+OPEN_STALE_SECONDS=21600
+session_is_open() {
+  local mk t now
+  mk="$(open_mark "$1" "$2")"
+  [ -f "$mk" ] || return 1
+  now="$(date +%s)"
+  [ $((now - $(file_mtime "$mk"))) -lt "$OPEN_STALE_SECONDS" ] && return 0
+  t="$(transcript_of "$1" "$2")"
+  [ -n "$t" ] && [ $((now - $(file_mtime "$t"))) -lt "$OPEN_STALE_SECONDS" ] && return 0
+  return 1
+}
+
+# open_members <dir> <root id> -> short ids of the thread's sessions that are open
 open_members() {
   local m
   while IFS= read -r m; do
-    [ -n "$m" ] && [ -f "$(open_mark "$1" "$m")" ] && printf '%s\n' "${m:0:8}"
+    [ -n "$m" ] && session_is_open "$1" "$m" && printf '%s\n' "${m:0:8}"
   done <<< "$(thread_members "$1" "$2")"
 }
 

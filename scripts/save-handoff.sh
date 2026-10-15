@@ -18,10 +18,16 @@ cwd="$(printf '%s' "$input" | jq -r '.cwd // empty')"
 [ -n "$transcript" ] && [ -f "$transcript" ] || exit 0
 transcript_is_headless "$transcript" && exit 0
 [ -n "$cwd" ] || cwd="$PWD"
-[ -n "$sid" ] || sid="unknown"
+[ -n "$sid" ] || { echo "handoff: hook input carries no session_id; nothing written" >&2; exit 1; }
 
 dir="$(handoff_dir "$cwd")"
 st="$(state_dir "$dir")"
+# Someone committed the handoff directory: a tracked file must not be rewritten by a hook
+# (it would land in the next `git commit -a`). Nothing is written there, not even the audit log.
+if tracked_in_git "$dir" "$cwd"; then
+  echo "handoff: $dir holds files tracked by git; the plugin writes nothing there (remove it from git or set CLAUDE_HANDOFF_IN_PROJECT=false)" >&2
+  exit 0
+fi
 mkdir -p "$st" 2>/dev/null || exit 0
 printf '%s' "$transcript" > "$st/${sid:0:8}.transcript"
 printf '%s' "$cwd" > "$st/${sid:0:8}.cwd"
@@ -49,9 +55,14 @@ keep="$(int_setting "${CLAUDE_HANDOFF_KEEP:-}" 50)"
 [ "$keep" -gt 0 ] && [ "$keep" -lt 5 ] && keep=5
 
 # Stop can fire while Claude Code is still appending the final assistant line to the
-# transcript. Give it up to two seconds to land, so the reply and its usage are included.
+# transcript. Wait (up to two seconds) only while the last row is still the user's and the file
+# keeps growing; transcripts usually end in bookkeeping rows, which means the reply has landed.
+prev=-1
 for _ in 1 2 3 4; do
-  [ "$(tail -n 1 "$transcript" 2>/dev/null | jq -r '.type // empty' 2>/dev/null)" = "assistant" ] && break
+  [ "$(tail -n 1 "$transcript" 2>/dev/null | jq -r '.type // empty' 2>/dev/null)" = "user" ] || break
+  size="$(wc -c < "$transcript" 2>/dev/null | tr -d ' ')"
+  [ "$size" = "$prev" ] && break
+  prev="$size"
   sleep 0.5
 done
 
@@ -111,12 +122,15 @@ meta="$(jq -s -L "$HERE" \
       | .out + (if .last then [.last] else [] end)
       # The hook input carries the final reply directly; use it if the transcript lacks it.
       | if $lam != "" and (last // "") != $lam then . + [$lam] else . end ) as $texts
-  # One API call produces several transcript rows with the same usage: count each request once.
+  # One API call produces several transcript rows with the same usage: count each request once,
+  # in time order (unique_by sorts by its key, so the order is restored afterwards).
   | ( [ .[] | select(.type == "assistant" and .message.usage != null) ]
-      | unique_by(.requestId // .uuid)
-      | map({ t: (ts | fmt("%H:%M")), w: (.message.usage.cache_creation_input_tokens // 0),
+      | unique_by(.requestId // .uuid) | sort_by(.timestamp // "")
+      | map({ t: (ts | fmt("%H:%M")), d: (ts | fmt("%Y-%m-%d")), s: (.sessionId // ""),
+              w: (.message.usage.cache_creation_input_tokens // 0),
               r: (.message.usage.cache_read_input_tokens // 0), i: (.message.usage.input_tokens // 0),
               o: (.message.usage.output_tokens // 0) }) ) as $calls
+  | ($calls | map(.w + .r + .i) | max // 0) as $max_context
   | {
       # The file is named after the thread root session; its title wins, later sessions only add to the file.
       title:        (([ .[] | select(.type == "ai-title" and (.sessionId // $root) == $root) | .aiTitle ] | last)
@@ -140,10 +154,19 @@ meta="$(jq -s -L "$HERE" \
         input: ($calls | map(.i) | add // 0),
         output:($calls | map(.o) | add // 0),
         context: ($calls | last // {} | ((.w // 0) + (.r // 0) + (.i // 0))),
-        big_writes: ($calls | map(select(.w >= 20000)) | tail(8) | map(.t + " " + k(.w)) | join(", "))
+        max_context: $max_context,
+        big_writes: ($calls | map(select(.w >= 20000)) | tail(8) | map(.t + " " + k(.w)) | join(", ")),
+        # one row per session of the thread, in the order the sessions first appear
+        sessions: ($calls | group_by(.s) | map({ s: (.[0].s | .[0:8]), d: ((map(.d) | min) // ""), first: (.[0].t),
+                     calls: length, cold: (map(.w) | add), warm: (map(.r) | add), input: (map(.i) | add), output: (map(.o) | add) })
+                   | sort_by(.d + " " + .first))
       }
-    }' "${transcripts[@]}" 2>/dev/null)" || exit 0
-[ -n "$meta" ] || exit 0
+    }' "${transcripts[@]}" 2>"$st/${sid:0:8}.render.err")" || {
+  audit "$dir" "$sid" "render-failed" "$transcript: $(head -c 200 "$st/${sid:0:8}.render.err" 2>/dev/null | tr '\n' ' ')"
+  echo "handoff: could not render $transcript (see .state/audit.log); the file was left as it was" >&2
+  rm -f "$st/${sid:0:8}.render.err"; exit 1; }
+rm -f "$st/${sid:0:8}.render.err"
+[ -n "$meta" ] || { audit "$dir" "$sid" "render-failed" "$transcript: empty result"; echo "handoff: empty render of $transcript" >&2; exit 1; }
 
 slug="$(printf '%s' "$meta" | jq -r '.started_slug')"
 [ -n "$slug" ] || slug="$(date +%Y-%m-%d_%H%M)"
@@ -152,7 +175,7 @@ file="$dir/${slug}_${title_slug:+${title_slug}_}${root:0:8}.md"
 
 # One writer per thread at a time (the Stop hooks of two sessions of one thread, or a Stop
 # that overlaps the next turn's notes edit).
-take_lock "$dir" "$root" || exit 0
+take_lock "$dir" "$root" || { audit "$dir" "$sid" "lock-timeout" "$file"; echo "handoff: render lock of ${root:0:8} held for 10 s; this update skipped" >&2; exit 1; }
 trap 'release_lock "$dir" "$root"; rm -f "$last_msg_file"' EXIT
 
 # The title can appear or change after the first reply: keep one file per thread.
@@ -182,7 +205,7 @@ compact_section=""
 all_compact=""
 while IFS= read -r m; do
   # Sidecars written by older versions may quote the notes markers: neutralise them on the way in.
-  [ -n "$m" ] && [ -s "$st/${m:0:8}.compact.md" ] && all_compact="${all_compact}$(sed 's/<!-- handoff:/<!-- handoffâ/g' "$st/${m:0:8}.compact.md")
+  [ -n "$m" ] && [ -s "$st/${m:0:8}.compact.md" ] && all_compact="${all_compact}$(neutralise_markers < "$st/${m:0:8}.compact.md" | clean_text)
 "
 done <<< "$members"
 if [ -n "$all_compact" ]; then
@@ -220,16 +243,31 @@ $log
 "
 fi
 
-# The three text blocks go in as jq arguments: no shell substitution touches user text
+# The "Next" header line: the Next action from the notes, so the first screen of the file
+# says what to do. Rates for the token table: input-equivalents = write×cold + read×warm +
+# input + out×output (Fable 5.1: 2, 0.025, 5), USD at $price per million input tokens.
+next_line="$(next_of_notes "$dir" "$root")"
+rate_read="${CLAUDE_HANDOFF_RATE_READ:-0.025}"; rate_write="${CLAUDE_HANDOFF_RATE_WRITE:-2}"
+rate_out="${CLAUDE_HANDOFF_RATE_OUTPUT:-5}"; price="${CLAUDE_HANDOFF_PRICE_PER_M:-10}"
+for v in rate_read rate_write rate_out price; do
+  eval "x=\$$v"; printf '%s' "$x" | grep -Eq '^[0-9]+(\.[0-9]+)?$' || eval "$v=0"
+done
+
+# The text blocks go in as jq arguments: no shell substitution touches user text
 # (bash 5.2 would expand "&" in a ${var//…} replacement, bash 3.2 keeps quotes literally).
 body="$(printf '%s' "$meta" | jq -r \
   --arg sid "$sid" --arg root "$root" --arg cwd "$cwd" --arg branch "$branch" \
   --arg thread "$thread_ids" --argjson nm "$n_members" --arg status "$status_line" \
-  --arg notes "$notes" --arg compact "$compact_section" --arg git "$git_section" '
+  --arg notes "$notes" --arg compact "$compact_section" --arg git "$git_section" --arg next "$next_line" \
+  --argjson rr "$rate_read" --argjson rw "$rate_write" --argjson ro "$rate_out" --argjson price "$price" '
   def section(title; body): if (body | length) > 0 then "## " + title + "\n\n" + body + "\n\n" else "" end;
   def k(n): if n >= 1000000 then ((n / 100000 | floor) / 10 | tostring) + "M" elif n >= 1000 then ((n / 1000) | floor | tostring) + "k" else (n | tostring) end;
+  def eq: ($rw * .cold + $rr * .warm + .input + $ro * .output);
+  def usd: (eq * $price / 10000 | round / 100 | tostring);
   def quote: "> " + gsub("\n"; "\n> ");
+  def row(lbl): "| " + lbl + " | " + (.calls | tostring) + " | " + k(.cold) + " | " + k(.warm) + " | " + k(.output) + " | " + k(eq) + " | " + usd + " |\n";
   "# Handoff: " + (if .title == "" then "untitled session" else .title end) + "\n\n"
+  + (if $next != "" then "- Next: " + $next + "\n" else "" end)
   + "- Session: `" + $sid + "`\n"
   + (if $nm > 1 then "- Thread: " + $thread + " (" + ($nm | tostring) + " sessions in this file)\n" else "" end)
   + "- Project: `" + $cwd + "`\n"
@@ -241,19 +279,22 @@ body="$(printf '%s' "$meta" | jq -r \
   + "<!-- handoff:root:" + $root + " -->\n"
   + "<!-- handoff:updated_epoch:" + (.updated_epoch | tostring) + " -->\n\n"
   + "## Notes (written by /handoff:notes)\n\n" + $notes + "\n\n"
-  + $compact
   + section("Last reply from Claude"; (.replies | last // "" | quote))
   + section("Earlier replies, oldest first"; (.replies | .[:-1] | map(quote) | join("\n\n---\n\n")))
   + section("User requests, in order"; (.prompts | map("- `" + .t + "` " + .text) | join("\n")))
   + section("Files changed"; (.edited | map("- `" + . + "`") | join("\n")))
   + section("Files read"; (.read | map("- `" + . + "`") | join("\n")))
   + $git
+  + $compact
   + "## Tokens\n\n"
-  + "| API calls | Context now | Cold (cache writes) | Warm (cache reads) | Output |\n|---|---|---|---|---|\n"
-  + "| " + (.tokens.calls | tostring) + " | " + k(.tokens.context) + " | " + k(.tokens.cold) + " | " + k(.tokens.warm) + " | " + k(.tokens.output) + " |\n\n"
+  + "Context now: " + k(.tokens.context) + " tokens (largest request so far: " + k(.tokens.max_context) + ").\n\n"
+  + "| Session | API calls | Cold (cache writes) | Warm (cache reads) | Output | Input-equivalents | ≈ USD at API prices |\n|---|---|---|---|---|---|---|\n"
+  + (if (.tokens.sessions | length) > 1 then (.tokens.sessions | map(row(.s + " " + .d)) | join("")) else "" end)
+  + (.tokens | row(if (.sessions | length) > 1 then "**total**" else ((.sessions[0].s // "") + " " + (.sessions[0].d // "")) end))
+  + "\nEquivalents = " + ($rw | tostring) + "×cold + " + ($rr | tostring) + "×warm + input + " + ($ro | tostring) + "×output (the model'"'"'s cache rates; CLAUDE_HANDOFF_RATE_READ/_WRITE/_OUTPUT). USD = equivalents × $" + ($price | tostring) + " per million (CLAUDE_HANDOFF_PRICE_PER_M): API prices, not subscription usage.\n\n"
   + (if .tokens.big_writes != "" then "Large cache writes (cold starts, skill loads, cache expiry): " + .tokens.big_writes + "\n\n" else "" end)
 ')"
-[ -n "$body" ] || exit 0
+[ -n "$body" ] || { audit "$dir" "$sid" "render-failed" "$file: empty body"; echo "handoff: empty body for $file" >&2; exit 1; }
 
 # A member's transcript was deleted (Claude Code keeps them cleanupPeriodDays, 30 by default):
 # the thread cannot be rebuilt from scratch, so the last full snapshot is appended as archive.
@@ -268,7 +309,9 @@ ${part}
 
 "
   done
-  [ -n "$archive" ] && body="${body}## Archived history
+  [ -n "$archive" ] && body="${body}
+
+## Archived history
 
 _Transcripts of session(s) ${missing}are no longer on disk; this is the snapshot of the file taken ${missing:+$(date -r "$fz" '+%Y-%m-%d %H:%M' 2>/dev/null)}._
 
@@ -305,4 +348,16 @@ if [ "$keep" -gt 0 ] 2>/dev/null; then
     done
   fi
 fi
+# Open marks left behind by a crash (no SessionEnd ran): dropped once the session showed no
+# life for OPEN_STALE_SECONDS, so the start message stops calling it open.
+now_s="$(date +%s)"
+for mk in "$st"/*.open; do
+  [ -f "$mk" ] || continue
+  m8="$(basename "$mk" .open)"
+  [ "$m8" = "${sid:0:8}" ] && continue
+  [ $((now_s - $(file_mtime "$mk"))) -lt "$OPEN_STALE_SECONDS" ] && continue
+  mt="$(cat "$st/$m8.transcript" 2>/dev/null || true)"
+  [ -n "$mt" ] && [ -f "$mt" ] && [ $((now_s - $(file_mtime "$mt"))) -lt "$OPEN_STALE_SECONDS" ] && continue
+  audit "$dir" "$sid" "stale-open-rm" "$mk"; rm -f "$mk"
+done
 exit 0
