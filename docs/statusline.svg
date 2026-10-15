@@ -2,7 +2,7 @@
 <rect width="968" height="106" rx="10" fill="#1e1f22"/>
 <rect width="968" height="36" rx="10" fill="#2b2d31"/><rect y="20" width="968" height="16" fill="#2b2d31"/>
 <circle cx="18" cy="18" r="6" fill="#ff5f57"/><circle cx="38" cy="18" r="6" fill="#febc2e"/><circle cx="58" cy="18" r="6" fill="#28c840"/>
-<text x="484.0" y="23" text-anchor="middle" fill="#9aa0a6" font-size="12">status line — normal, and at 72% context</text>
-<text x="16" y="65" fill="#e3e3e3" xml:space="preserve">handoff ● Работа плагина handof (+2) · ctx 41%</text>
-<text x="16" y="84" fill="#e3e3e3" xml:space="preserve">handoff ● Работа плагина handof (+2) · ctx 72% → /handoff:notes · 5h 83% → /handoff:notes</text>
+<text x="484.0" y="23" text-anchor="middle" fill="#9aa0a6" font-size="12">status line</text>
+<text x="16" y="65" fill="#e3e3e3" xml:space="preserve">handoff ● Rate limiter with Redis fallback (+1) · ctx 41%</text>
+<text x="16" y="84" fill="#e3e3e3" xml:space="preserve">handoff ● Rate limiter with Redis fallback (+1) · ctx 72% → /handoff:notes · 5h 83% → /handoff:not …</text>
 </svg>

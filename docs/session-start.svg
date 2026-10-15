@@ -4,35 +4,35 @@
 <circle cx="18" cy="18" r="6" fill="#ff5f57"/><circle cx="38" cy="18" r="6" fill="#febc2e"/><circle cx="58" cy="18" r="6" fill="#28c840"/>
 <text x="484.0" y="23" text-anchor="middle" fill="#9aa0a6" font-size="12">claude — new session: the list in the terminal, a number as the first message, the thread continues</text>
 <text x="16" y="65" fill="#e3e3e3" xml:space="preserve">Continue a session? Type its number, or just start typing.</text>
-<text x="16" y="84" fill="#e3e3e3" xml:space="preserve">1  Работа плагина handof                     1 min    next: open scripts/load-handoff.sh:42 and ru …</text>
-<text x="16" y="103" fill="#e3e3e3" xml:space="preserve">2  Расход денег при старте сессии            23 min</text>
-<text x="16" y="122" fill="#e3e3e3" xml:space="preserve">3  Автозапуск агента по тикетам Jira         36 min</text>
-<text x="16" y="141" fill="#e3e3e3" xml:space="preserve">5  Сохранение прогресса в файл через хук     17 h</text>
-<text x="16" y="160" fill="#e3e3e3" xml:space="preserve">7  Продвижение и публикация приложения       37 h</text>
-<text x="16" y="179" fill="#e3e3e3" xml:space="preserve">Tip: `claude -r 132173db-4602-4b92-9d2a-3965313963d3` is cheaper (cache still warm, closed 1 min a …</text>
-<text x="16" y="198" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="217" fill="#c3e88d" xml:space="preserve">&gt; 1</text>
-<text x="16" y="236" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="255" fill="#e3e3e3" xml:space="preserve">joined thread 132173db: this session now writes into 2026-10-13_1342_Работа-плагина-handof_132173d …</text>
-<text x="16" y="274" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="293" fill="#8ab4f8" xml:space="preserve"># Handoff: Работа плагина handof</text>
-<text x="16" y="312" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="331" fill="#e3e3e3" xml:space="preserve">- Next: open scripts/load-handoff.sh:42 and run bash tests/run.sh.</text>
-<text x="16" y="350" fill="#e3e3e3" xml:space="preserve">- Session: `132173db-4602-4b92-9d2a-3965313963d3`</text>
-<text x="16" y="369" fill="#e3e3e3" xml:space="preserve">- Thread: 132173db → 58ea7c78 (2 sessions in this file)</text>
-<text x="16" y="388" fill="#e3e3e3" xml:space="preserve">- Project: `~/Projects/sdd-agent-cli`</text>
-<text x="16" y="407" fill="#e3e3e3" xml:space="preserve">- Branch: `feature/autofix-agent`</text>
-<text x="16" y="426" fill="#e3e3e3" xml:space="preserve">- Started: 2026-10-13 13:42</text>
-<text x="16" y="445" fill="#e3e3e3" xml:space="preserve">- Updated: 2026-10-15 04:46</text>
-<text x="16" y="464" fill="#e3e3e3" xml:space="preserve">- User turns: 32</text>
-<text x="16" y="483" fill="#e3e3e3" xml:space="preserve">- Status: 🟢 in work (joined by session 33333333 at 2026-10-15 04:48)</text>
-<text x="16" y="502" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="521" fill="#8ab4f8" xml:space="preserve">## Notes (written by /handoff:notes)</text>
-<text x="16" y="540" fill="#e3e3e3" xml:space="preserve"></text>
-<text x="16" y="559" fill="#e3e3e3" xml:space="preserve">**Goal**: verify the handoff plugin end to end in a real session of this project and ship the fixe …</text>
-<text x="16" y="578" fill="#e3e3e3" xml:space="preserve">**Done**: hooks verified (SessionStart, Stop, PostCompact); plugin installed from the marketplace; …</text>
-<text x="16" y="597" fill="#e3e3e3" xml:space="preserve">**Decisions**: notes live in `.state/&lt;root&gt;.notes.md`, the file shows a copy (no race with the asy …</text>
-<text x="16" y="616" fill="#e3e3e3" xml:space="preserve">**Open questions**: Windows (Git Bash) untested.</text>
-<text x="16" y="635" fill="#e3e3e3" xml:space="preserve">**Next action**: open `scripts/load-handoff.sh:42` and run `bash tests/run.sh`.</text>
-<text x="16" y="654" fill="#e3e3e3" xml:space="preserve">**Next steps**: 1. re-render docs images 2. Reddit post 3. GitHub releases from tags</text>
+<text x="16" y="84" fill="#e3e3e3" xml:space="preserve">1  Rate limiter with Redis fallback          4 min    next: open ratelimit/bucket.go:142 and run g …</text>
+<text x="16" y="103" fill="#e3e3e3" xml:space="preserve">2  Health check 503 after deploy             2 h      ● open</text>
+<text x="16" y="122" fill="#e3e3e3" xml:space="preserve">3  Migrate auth middleware to JWT            1 d      next: wire RS256 keys from the secrets store</text>
+<text x="16" y="141" fill="#e3e3e3" xml:space="preserve">5  Flaky e2e tests on CI                     3 d</text>
+<text x="16" y="160" fill="#e3e3e3" xml:space="preserve">Tip: `claude -r 8f3c21aa-1111-4e2e-9a11-aaaaaaaaaaaa` is cheaper (cache still warm, closed 4 min a …</text>
+<text x="16" y="179" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="198" fill="#c3e88d" xml:space="preserve">&gt; 1</text>
+<text x="16" y="217" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="236" fill="#e3e3e3" xml:space="preserve">joined thread 8f3c21aa: this session now writes into 2026-10-12_1114_Rate-limiter-with-Redis-fallb …</text>
+<text x="16" y="255" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="274" fill="#8ab4f8" xml:space="preserve"># Handoff: Rate limiter with Redis fallback</text>
+<text x="16" y="293" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="312" fill="#e3e3e3" xml:space="preserve">- Next: open ratelimit/bucket.go:142 and run go test ./ratelimit/</text>
+<text x="16" y="331" fill="#e3e3e3" xml:space="preserve">- Session: `8f3c21aa-1111-4e2e-9a11-aaaaaaaaaaaa`</text>
+<text x="16" y="350" fill="#e3e3e3" xml:space="preserve">- Thread: 8f3c21aa → c41d0b2e (2 sessions in this file)</text>
+<text x="16" y="369" fill="#e3e3e3" xml:space="preserve">- Project: `~/code/api-gateway`</text>
+<text x="16" y="388" fill="#e3e3e3" xml:space="preserve">- Branch: `feature/rate-limits`</text>
+<text x="16" y="407" fill="#e3e3e3" xml:space="preserve">- Started: 2026-10-12 11:14</text>
+<text x="16" y="426" fill="#e3e3e3" xml:space="preserve">- Updated: 2026-10-12 15:02</text>
+<text x="16" y="445" fill="#e3e3e3" xml:space="preserve">- User turns: 14</text>
+<text x="16" y="464" fill="#e3e3e3" xml:space="preserve">- Status: 🟢 in work (joined by session c41d0b2e at 2026-10-12 15:06)</text>
+<text x="16" y="483" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="502" fill="#8ab4f8" xml:space="preserve">## Notes (written by /handoff:notes)</text>
+<text x="16" y="521" fill="#e3e3e3" xml:space="preserve"></text>
+<text x="16" y="540" fill="#e3e3e3" xml:space="preserve">**Goal**: per-key rate limiting in the gateway, Redis first, in-process fallback when Redis is dow …</text>
+<text x="16" y="559" fill="#e3e3e3" xml:space="preserve">**Done**: token bucket (100 req/min, burst 20) as middleware; Lua script for an atomic take; unit  …</text>
+<text x="16" y="578" fill="#e3e3e3" xml:space="preserve">**In progress**: fallback after 2 failed pings; the switch back to Redis is not implemented.</text>
+<text x="16" y="597" fill="#e3e3e3" xml:space="preserve">**Decisions**: token bucket over sliding window (cheaper in Redis, good enough for per-key limits) …</text>
+<text x="16" y="616" fill="#e3e3e3" xml:space="preserve">**Open questions**: should the fallback mode be visible in /healthz?</text>
+<text x="16" y="635" fill="#e3e3e3" xml:space="preserve">**Next action**: open `ratelimit/bucket.go:142` and run `go test ./ratelimit/`.</text>
+<text x="16" y="654" fill="#e3e3e3" xml:space="preserve">**Next steps**: 1. switch back to Redis after 3 good pings 2. metrics for fallback mode 3. load te …</text>
 </svg>
