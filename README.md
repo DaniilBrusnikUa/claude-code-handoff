@@ -119,7 +119,7 @@ Example, central storage for every project: `{ "env": { "CLAUDE_HANDOFF_IN_PROJE
 
 ## What it runs, sends and fetches
 
-Hooks run the bash scripts in `scripts/` with `jq` and `git` from your PATH. They read the session transcript under `~/.claude/projects/`, the hook's stdin JSON, and `git` state of the project; they write markdown files and small state files under the handoff directory, a line in the clone's `.git/info/exclude`, and nothing else. `/handoff:open` runs `open` (macOS) or `xdg-open` (Linux) on the handoff file. No network access, no telemetry, no package installs, no credentials read or sent, no changes to Claude Code settings or permissions. The one model-written part, the notes, happens only when you run `/handoff:notes` or set `CLAUDE_HANDOFF_AUTO_NOTES`. The event-by-event description is in [docs/INTERNALS.md](docs/INTERNALS.md).
+Hooks run the bash scripts in `scripts/` with `jq` and `git` from your PATH. They read the session transcript under `~/.claude/projects/`, the hook's stdin JSON, and `git` state of the project; they write markdown files and small state files under the handoff directory, a line in the clone's `.git/info/exclude`, and nothing else. `/handoff:open` runs the system opener on the handoff file: `open` (macOS), `xdg-open` (Linux), `cmd.exe /c start` (Git Bash), `wslview` or `explorer.exe` (WSL). No network access, no telemetry, no package installs, no credentials read or sent, no changes to Claude Code settings or permissions. The one model-written part, the notes, happens only when you run `/handoff:notes` or set `CLAUDE_HANDOFF_AUTO_NOTES`. The event-by-event description is in [docs/INTERNALS.md](docs/INTERNALS.md).
 
 ## Privacy
 
@@ -153,7 +153,7 @@ The plugin does not replace `--resume`: within the hour, resuming is the cheapes
 
 **Two terminals in the same project?** Each session has its own file unless it joined another. The list shows both and marks the open one; the start says when the newest one is still open elsewhere.
 
-**Windows?** Untested. The scripts are plain bash + jq; Git Bash or WSL should work. Reports welcome.
+**Windows?** Yes, in Git Bash, which Claude Code on Windows already uses for shell commands (reported by a user; the author has no Windows machine). Install jq with `winget install jqlang.jq`, restart the terminal, and the hooks run as on macOS or Linux. WSL works like Linux. `/handoff:open` opens the file with the Windows default app in both.
 
 ## Uninstall
 
@@ -166,7 +166,15 @@ The plugin does not replace `--resume`: within the hour, resuming is the cheapes
 
 ## Requirements
 
-`bash` (3.2 or newer), `jq` 1.6 or newer, `git`. Present on macOS and most Linux distributions.
+`bash` (3.2 or newer), `jq` 1.6 or newer, `git`.
+
+| | bash and git | jq |
+|---|---|---|
+| macOS | included (git comes with the Xcode Command Line Tools) | `brew install jq` |
+| Linux | included | `sudo apt install jq`, `sudo dnf install jq` or your package manager |
+| Windows | Git for Windows (Git Bash), which Claude Code requires anyway | `winget install jqlang.jq` |
+
+Check with `jq --version` in the terminal Claude Code uses. Without jq the hooks exit silently and no file is written.
 
 ## Development
 

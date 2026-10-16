@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.1 — 2026-10-16
+- Windows: `/handoff:open` opens the file with the default app in Git Bash (`cmd.exe /c start`) and WSL (`wslview` or `explorer.exe`); before, it only printed the path there. README: Windows confirmed in Git Bash (user report), jq install per OS, a check that jq is visible to the hooks.
+
 ## 0.6.0 — 2026-10-15
 - Start screen: one line per session with title, age and the next action from its notes, or `● open`; no dates, ids or branch columns; untitled 0-turn sessions skipped; sessions ordered by their `updated_epoch`, not file mtime; the numbered list is written to `.state/<session>.index` once, so numbers stay valid; `new` keyword dropped, just type your task. One-line cache tip (`claude -r <id>` is cheaper), its window from the transcript's cache TTL (5 min or 1 h); a note when the newest file is on another branch; open marks older than 6 h without activity count as closed. Cold `--resume` / fork note made actionable (Ctrl+C, `claude`, the number).
 - Status bar: short form `handoff ● <title> (+N) · ctx 41%`; `→ /handoff:notes` at 70% context or 80% of the 5-hour limit, `notes now` at 95%, 7-day limit shown from 90% (`CLAUDE_HANDOFF_NUDGE_LIMIT_HARD`, `_NUDGE_WEEK`); stdin session id wins over a stale environment.

@@ -253,5 +253,22 @@ for v in abcdefgh1234 hunter22 ABCDEFGHIJKLMNOPQRSTUVWXYZ1234 "$sk" "${gk%abcdef
 done
 check "scrub keeps ordinary text" 'printf "%s" "$sc" | grep -qF "keep=this"'
 
+# ---- 14. open: the opener matches the platform, the path is always printed ------------
+mkdir -p "$T/bin"
+printf '#!/usr/bin/env bash\necho MINGW64_NT-10.0\n' > "$T/bin/uname"
+printf '#!/usr/bin/env bash\nprintf "W:%%s\\n" "$2"\n' > "$T/bin/cygpath"
+printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/opened"\n' "$T" > "$T/bin/cmd.exe"
+chmod +x "$T/bin/"*
+out="$(CLAUDE_CODE_SESSION_ID="$A" PATH="$T/bin:$PATH" "$S/handoff-open.sh" "$proj" 2>/dev/null)"
+check "open on Git Bash: cmd.exe start with the converted path; path printed" '[ "$out" = "$fa" ] && grep -q "^/c start " "$T/opened" && grep -qF "W:$fa" "$T/opened"'
+printf '#!/usr/bin/env bash\necho Linux\n' > "$T/bin/uname"
+printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/opened"\n' "$T" > "$T/bin/xdg-open"
+chmod +x "$T/bin/"*; rm -f "$T/opened"
+out="$(CLAUDE_CODE_SESSION_ID="$A" PATH="$T/bin:$PATH" "$S/handoff-open.sh" "$proj" 2>/dev/null)"
+check "open on Linux: xdg-open with the path; path printed" '[ "$out" = "$fa" ] && [ "$(cat "$T/opened")" = "$fa" ]'
+rm -f "$T/bin/xdg-open" "$T/opened"
+out="$(CLAUDE_CODE_SESSION_ID="$A" PATH="$T/bin:$PATH" "$S/handoff-open.sh" "$proj" 2>/dev/null)"
+check "open without an opener: only prints the path, exit 0" '[ "$out" = "$fa" ] && [ ! -f "$T/opened" ]'
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" = 0 ]
