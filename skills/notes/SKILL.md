@@ -1,6 +1,7 @@
 ---
 name: notes
 description: Write the notes of the handoff file: goal, done, decisions and why, open questions, next action. Use before a long break, before /clear, or when the user asks to save progress or leave notes. Everything else in the file is already written by the hooks.
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/scripts/handoff-path.sh" --notes)
 ---
 
 # Handoff notes

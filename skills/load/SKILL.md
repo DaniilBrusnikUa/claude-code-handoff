@@ -2,6 +2,7 @@
 name: load
 description: Continue an earlier session by its number from /handoff:list, its id or part of its name: Claude reads its handoff file and this session writes into that file from now on.
 argument-hint: <number | session id | part of the file name>
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/scripts/handoff-show.sh" --adopt *), Bash("${CLAUDE_PLUGIN_ROOT}/scripts/handoff-list.sh"), AskUserQuestion
 ---
 
 1. Run:

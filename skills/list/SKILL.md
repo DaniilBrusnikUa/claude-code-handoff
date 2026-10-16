@@ -1,6 +1,7 @@
 ---
 name: list
 description: Numbered list of this project's sessions (handoff files) with an arrow-key menu to continue one. Use when the user asks which sessions exist here or wants to pick one.
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/scripts/handoff-list.sh"), Bash("${CLAUDE_PLUGIN_ROOT}/scripts/handoff-show.sh" --adopt *), AskUserQuestion
 ---
 
 1. Run and show the output unchanged, as a code block:

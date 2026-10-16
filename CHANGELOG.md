@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.2 — 2026-10-16
+- Skills declare `allowed-tools` for their own scripts only, so `/handoff:list`, `load`, `status`, `open` and the path lookup of `notes` run without a permission prompt in the default mode. Writing the notes file still asks once: Claude Code treats `.claude/` as a protected directory and a skill cannot lift that.
+
 ## 0.6.1 — 2026-10-16
 - Windows: `/handoff:open` opens the file with the default app in Git Bash (`cmd.exe /c start`) and WSL (`wslview` or `explorer.exe`); before, it only printed the path there. README: Windows confirmed in Git Bash (user report), jq install per OS, a check that jq is visible to the hooks.
 

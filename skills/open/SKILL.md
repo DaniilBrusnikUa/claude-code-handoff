@@ -1,6 +1,7 @@
 ---
 name: open
 description: Open this session's handoff file in the default app, or print its path. Use when the user asks to open, see or find the handoff file.
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/scripts/handoff-open.sh")
 ---
 
 Run:
